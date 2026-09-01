@@ -3,6 +3,7 @@ import Hero from '@/src/homepage/Hero'
 import Packages from '@/src/homepage/Packages'
 import Destinations from '@/src/homepage/Destinations'
 import Testimonials from '@/src/homepage/Testimonials'
+import Faq from '@/src/homepage/Faq'
 import EnquiryForm from '@/src/homepage/EnquiryForm'
 import Footer from '@/src/components/Footer'
 
@@ -15,6 +16,7 @@ export default function Page() {
         <Packages />
         <Destinations />
         <Testimonials />
+        <Faq />
         <EnquiryForm />
       </main>
       <Footer />

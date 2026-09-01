@@ -1,6 +1,9 @@
+import Link from 'next/link'
+
 const destinations = [
   {
     id: 1,
+    slug: 'ladakh',
     name: 'Ladakh',
     tagline: 'Land of High Passes',
     image: '/images/ladakh.jpg',
@@ -8,6 +11,7 @@ const destinations = [
   },
   {
     id: 2,
+    slug: 'manali',
     name: 'Manali',
     tagline: 'Queen of Himachal',
     image: '/images/manali.jpg',
@@ -15,6 +19,7 @@ const destinations = [
   },
   {
     id: 3,
+    slug: 'spiti',
     name: 'Spiti Valley',
     tagline: 'The Middle Land',
     image: '/images/spiti.jpg',
@@ -22,6 +27,7 @@ const destinations = [
   },
   {
     id: 4,
+    slug: 'kedarnath',
     name: 'Kedarnath',
     tagline: 'Abode of Lord Shiva',
     image: '/images/kedarnath.jpg',
@@ -29,6 +35,7 @@ const destinations = [
   },
   {
     id: 5,
+    slug: 'rishikesh',
     name: 'Rishikesh',
     tagline: 'Yoga Capital of the World',
     image: '/images/rishikesh.jpg',
@@ -36,6 +43,7 @@ const destinations = [
   },
   {
     id: 6,
+    slug: 'ranthambore',
     name: 'Ranthambore',
     tagline: 'Tiger Country',
     image: '/images/ranthambore.jpg',
@@ -43,6 +51,7 @@ const destinations = [
   },
   {
     id: 7,
+    slug: 'varanasi',
     name: 'Varanasi',
     tagline: 'The Eternal City',
     image: '/images/varanasi.jpg',
@@ -50,6 +59,7 @@ const destinations = [
   },
   {
     id: 8,
+    slug: 'andaman',
     name: 'Andaman Islands',
     tagline: 'Jewels of the Bay',
     image: '/images/andaman.jpg',
@@ -77,13 +87,14 @@ export default function Destinations() {
           {destinations.map((dest, index) => {
             const isLarge = index === 0 || index === 3
             return (
-              <div
+              <Link
                 key={dest.id}
+                href={`/destination/${dest.slug}`}
                 className={`group relative overflow-hidden rounded-2xl cursor-pointer ${
                   isLarge ? 'md:col-span-2' : ''
                 }`}
               >
-                <div className={`relative ${isLarge ? 'h-72' : 'h-52'} overflow-hidden`}>
+                <div className={`relative ${isLarge ? 'h-72' : 'h-72'} overflow-hidden`}>
                   <img
                     src={dest.image}
                     alt={dest.name}
@@ -91,6 +102,13 @@ export default function Destinations() {
                   />
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                  {/* Explore badge on hover */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="bg-white text-gray-900 text-xs font-semibold px-4 py-2 rounded-full shadow-lg">
+                      Explore →
+                    </span>
+                  </div>
 
                   {/* Text */}
                   <div className="absolute bottom-0 left-0 right-0 p-5">
@@ -101,7 +119,7 @@ export default function Destinations() {
                     <p className="text-sm text-gray-300">{dest.tagline}</p>
                   </div>
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>
