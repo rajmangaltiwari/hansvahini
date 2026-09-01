@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { Clock, Users, MountainSnow, CalendarDays } from 'lucide-react'
 import type { Destination } from '@/src/data/destinations'
 import Testimonials from '@/src/homepage/Testimonials'
 
@@ -102,13 +103,13 @@ export default function DestinationDetails({ dest }: { dest: Destination }) {
               <h1 className="text-3xl sm:text-5xl font-bold text-white">{dest.name}</h1>
               <div className="flex flex-wrap gap-3 mt-4">
                 {[
-                  { icon: '🕐', text: dest.duration },
-                  { icon: '👥', text: dest.groupSize },
-                  { icon: '⛰️', text: dest.difficulty },
-                  { icon: '📅', text: dest.bestTime },
+                  { icon: <Clock className="w-3.5 h-3.5" />,          text: dest.duration },
+                  { icon: <Users className="w-3.5 h-3.5" />,          text: dest.groupSize },
+                  { icon: <MountainSnow className="w-3.5 h-3.5" />,   text: dest.difficulty },
+                  { icon: <CalendarDays className="w-3.5 h-3.5" />,   text: dest.bestTime },
                 ].map((chip) => (
                   <span key={chip.text} className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
-                    <span>{chip.icon}</span> {chip.text}
+                    {chip.icon} {chip.text}
                   </span>
                 ))}
               </div>
