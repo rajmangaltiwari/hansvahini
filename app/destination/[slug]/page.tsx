@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { destinations, getDestinationBySlug } from '@/src/data/destinations'
 import Header from '@/src/components/Header'
 import Footer from '@/src/components/Footer'
-import DestinationDetails from '@/src/components/DestinationDetails'
+import DestinationDetail from '@/src/dastination/DestinationDetail'
+import EnquiryForm from '@/src/homepage/EnquiryForm'
 
 export function generateStaticParams() {
   return destinations.map((d) => ({ slug: d.slug }))
@@ -13,8 +14,8 @@ export async function generateMetadata(props: PageProps<'/destination/[slug]'>) 
   const dest = getDestinationBySlug(slug)
   if (!dest) return {}
   return {
-    title: `${dest.name} — Hansvahini Expeditions`,
-    description: dest.overview.slice(0, 155),
+    title: `${dest.name} Travel Guide — Hansvahini Expeditions`,
+    description: dest.blurb,
   }
 }
 
@@ -26,7 +27,8 @@ export default async function DestinationPage(props: PageProps<'/destination/[sl
   return (
     <>
       <Header />
-      <DestinationDetails dest={dest} />
+      <DestinationDetail dest={dest} />
+      <EnquiryForm />
       <Footer />
     </>
   )

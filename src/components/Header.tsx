@@ -16,11 +16,14 @@ const destinations = [
 
 const navLinks = [
   { label: 'Home',         href: '/#home' },
-  { label: 'Packages',     href: '/#packages' },
-  { label: 'Destinations', href: '/#destinations', hasDropdown: true },
+  { label: 'Packages',     href: '/packages' },
+  { label: 'Destinations', href: '/destination', hasDropdown: true },
   { label: 'Testimonials', href: '/#testimonials' },
   { label: 'Contact',      href: '/#contact' },
 ]
+
+/** Route links get client-side navigation; same-page anchors stay plain <a>. */
+const isRoute = (href: string) => !href.includes('#')
 
 export default function Header() {
   const [menuOpen, setMenuOpen]           = useState(false)
@@ -51,7 +54,7 @@ export default function Header() {
               link.hasDropdown ? (
                 /* Destinations with hover dropdown */
                 <div key={link.href} className="relative group">
-                  <a
+                  <Link
                     href={link.href}
                     className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium py-5"
                   >
@@ -59,7 +62,7 @@ export default function Header() {
                     <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-colors mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
-                  </a>
+                  </Link>
 
                   {/* Dropdown panel — shown on group hover */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -76,26 +79,42 @@ export default function Header() {
                           </Link>
                         ))}
                       </div>
+                      <Link
+                        href="/destination"
+                        className="mt-2 block text-center text-xs font-semibold text-gray-900 border-t border-gray-100 pt-3 hover:text-gray-500 transition-colors"
+                      >
+                        View all destinations →
+                      </Link>
                     </div>
                   </div>
                 </div>
               ) : (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium"
-                >
-                  {link.label}
-                </a>
+                isRoute(link.href) ? (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                  >
+                    {link.label}
+                  </a>
+                )
               )
             )}
           </nav>
 
           {/* CTA */}
           <div className="hidden md:block">
-            <a href="/#contact" className="inline-block bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-700 transition-colors">
+            <Link href="/#contact" className="inline-block bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-700 transition-colors">
               Submit Enquiry
-            </a>
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -141,6 +160,14 @@ export default function Header() {
                 {/* Sub-links */}
                 {destMobileOpen && (
                   <div className="pl-4 pb-2 space-y-1 border-l border-gray-100 ml-1">
+                    <Link
+                      href="/destination"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 text-sm font-semibold text-gray-900 py-1.5"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-gray-900 flex-shrink-0" />
+                      All Destinations
+                    </Link>
                     {destinations.map((dest) => (
                       <Link
                         key={dest.slug}
@@ -156,24 +183,35 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className="block text-sm text-gray-700 font-medium hover:text-gray-900 py-2"
-              >
-                {link.label}
-              </a>
+              isRoute(link.href) ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="block text-sm text-gray-700 font-medium hover:text-gray-900 py-2"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="block text-sm text-gray-700 font-medium hover:text-gray-900 py-2"
+                >
+                  {link.label}
+                </a>
+              )
             )
           )}
 
-          <a
+          <Link
             href="/#contact"
             onClick={() => setMenuOpen(false)}
             className="block w-full text-center bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-gray-700 transition-colors mt-3"
           >
             Get a Quote
-          </a>
+          </Link>
         </div>
       )}
     </header>

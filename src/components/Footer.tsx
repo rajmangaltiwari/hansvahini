@@ -1,9 +1,12 @@
+import Link from 'next/link'
+
 const footerLinks = {
   Explore: [
-    { label: 'Home', href: '#home' },
-    { label: 'Packages', href: '#packages' },
-    { label: 'Destinations', href: '#destinations' },
-    { label: 'Testimonials', href: '#testimonials' },
+    { label: 'Home', href: '/' },
+    { label: 'All Packages', href: '/packages' },
+    { label: 'All Destinations', href: '/destination' },
+    { label: 'Family Packages', href: '/packages?category=family' },
+    { label: 'Honeymoon Packages', href: '/packages?category=honeymoon' },
   ],
   Company: [
     { label: 'About Us', href: '#' },
@@ -111,12 +114,21 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-gray-400 hover:text-white transition-colors"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm text-gray-400 hover:text-white transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

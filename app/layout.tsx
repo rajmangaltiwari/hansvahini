@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
+import PopUpEnquiryForm from '@/src/components/PopUpEnquiryForm'
 
 const geist = Geist({
   variable: '--font-geist-sans',
@@ -15,9 +16,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         {children}
+        {/* Timed enquiry pop-up — appears 10s after arrival, once per page load */}
+        <PopUpEnquiryForm />
       </body>
     </html>
   )
