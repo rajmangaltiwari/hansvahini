@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { usePathname } from 'next/navigation'
 import { destinations } from '@/src/data/destinations'
 
 type FormState = {
@@ -235,6 +236,10 @@ const FOCUSABLE =
  * Timed enquiry pop-up modal component, mounted once in the root layout.
  */
 export default function PopUpEnquiryForm() {
+  const pathname = usePathname()
+  // The admin panel is a working tool — the marketing pop-up has no business there.
+  const suppressed = pathname.startsWith('/admin')
+
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [visible, setVisible] = useState(false)
@@ -248,10 +253,10 @@ export default function PopUpEnquiryForm() {
   }, [])
 
   useEffect(() => {
-    if (dismissed) return
+    if (dismissed || suppressed) return
     const timer = setTimeout(() => setOpen(true), POPUP_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [dismissed])
+  }, [dismissed, suppressed])
 
   useEffect(() => {
     if (!open) return
@@ -297,7 +302,7 @@ export default function PopUpEnquiryForm() {
     }
   }, [open, close])
 
-  if (!open) return null
+  if (!open || suppressed) return null
 
   return (
     <div

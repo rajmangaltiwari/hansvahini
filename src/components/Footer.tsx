@@ -9,7 +9,7 @@ const footerLinks = {
     { label: 'Honeymoon Packages', href: '/packages?category=honeymoon' },
   ],
   Company: [
-    { label: 'About Us', href: '#' },
+    { label: 'About Us', href: '/about' },
     { label: 'Our Team', href: '#' },
     { label: 'Careers', href: '#' },
     { label: 'Blog', href: '#' },
@@ -17,8 +17,8 @@ const footerLinks = {
   Support: [
     { label: 'Enquiry Form', href: '#contact' },
     { label: 'FAQs', href: '#' },
-    { label: 'Terms & Conditions', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
+    { label: 'Terms & Conditions', href: '/terms-and-conditions' },
+    { label: 'Privacy Policy', href: '/privacy-policy' },
   ],
 }
 

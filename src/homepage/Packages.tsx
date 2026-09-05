@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import PackageCard from '@/src/packages/PackageCard'
-import { popularPackages, travelPackages } from '@/src/data/packages'
+import { homepagePackages, travelPackages } from '@/src/data/packages'
 
-// Same card as the full /packages page — the homepage just shows the top six.
-const featured = popularPackages(6)
+// Same card as the full /packages page, in its compact form. Which six show up
+// is curated from /admin/packages; the copy is trimmed so the rows stay level.
+const featured = homepagePackages(6)
 
 export default function Packages() {
   return (
@@ -23,7 +24,7 @@ export default function Packages() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {featured.map((pkg) => (
-            <PackageCard key={pkg.id} pkg={pkg} />
+            <PackageCard key={pkg.id} pkg={pkg} compact />
           ))}
         </div>
 

@@ -5,10 +5,23 @@ import { formatPrice, packageCategories, type TravelPackage } from '@/src/data/p
 const labelFor = (id: string) =>
   packageCategories.find((c) => c.id === id)?.label.replace(' Packages', '') ?? id
 
-export default function PackageCard({ pkg }: { pkg: TravelPackage }) {
+/**
+ * `compact` trims the card down for dense grids — the homepage strip, where six
+ * of these sit above the fold and the full copy makes the rows ragged. The
+ * listing pages keep the roomier default.
+ */
+export default function PackageCard({
+  pkg,
+  compact = false,
+}: {
+  pkg: TravelPackage
+  compact?: boolean
+}) {
   const discount = pkg.oldPrice
     ? Math.round(((pkg.oldPrice - pkg.price) / pkg.oldPrice) * 100)
     : 0
+
+  const shownHighlights = compact ? 2 : 3
 
   return (
     <article className="group bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
@@ -56,7 +69,11 @@ export default function PackageCard({ pkg }: { pkg: TravelPackage }) {
             </span>
           </div>
 
-          <p className="text-sm text-gray-600 leading-relaxed">{pkg.summary}</p>
+          <p
+            className={`text-sm text-gray-600 leading-relaxed ${compact ? 'line-clamp-2' : ''}`}
+          >
+            {pkg.summary}
+          </p>
 
           {/* Meta row */}
           <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-xs text-gray-500">
@@ -71,7 +88,7 @@ export default function PackageCard({ pkg }: { pkg: TravelPackage }) {
 
           {/* Highlights */}
           <ul className="space-y-1.5 mt-4">
-            {pkg.highlights.slice(0, 3).map((point) => (
+            {pkg.highlights.slice(0, shownHighlights).map((point) => (
               <li key={point} className="flex items-start gap-2 text-sm text-gray-600">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
                 {point}

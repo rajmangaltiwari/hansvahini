@@ -55,6 +55,8 @@ export type TravelPackage = {
   activities: string[]
   badge?: string
   trending?: boolean
+  /** Absent means published — every entry below predates drafts and stays live. */
+  status?: 'draft' | 'published'
 }
 
 export const travelPackages: TravelPackage[] = [
@@ -1131,6 +1133,29 @@ export const packageDestinations = Array.from(
     travelPackages.map((p) => [p.destinationSlug, { slug: p.destinationSlug, name: p.destinationName }])
   ).values()
 ).sort((a, b) => a.name.localeCompare(b.name))
+
+/**
+ * The six trips in the homepage "Our Popular Packages" strip, in the order they
+ * appear there. Managed from /admin/packages — an empty list falls back to the
+ * most-reviewed six, so the homepage always has something to show.
+ */
+export const featuredPackageSlugs: string[] = [
+  'rishikesh-adventure-weekend',
+  'kedarnath-sacred-yatra',
+  'manali-family-retreat',
+  'ladakh-high-passes-expedition',
+  'varanasi-spiritual-circuit',
+  'manali-spiti-backpacker-circuit',
+]
+
+/** What the homepage renders: the hand-picked list, or the popular fallback. */
+export function homepagePackages(limit = 6): TravelPackage[] {
+  const picked = featuredPackageSlugs
+    .map((slug) => travelPackages.find((p) => p.slug === slug))
+    .filter((p): p is TravelPackage => Boolean(p))
+
+  return picked.length > 0 ? picked.slice(0, limit) : popularPackages(limit)
+}
 
 /** Most-reviewed first — used for "Popular Packages" on the homepage. */
 export function popularPackages(limit = 6): TravelPackage[] {

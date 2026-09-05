@@ -17,14 +17,26 @@ export type Region =
   | 'Uttar Pradesh'
   | 'Islands'
 
-export type Experience =
-  | 'Adventure'
-  | 'Spiritual'
-  | 'Wildlife'
-  | 'Beach'
-  | 'Culture'
-  | 'Snow'
-  | 'Trekking'
+/** The experiences the /destination filter dropdown ships with. */
+export const knownExperiences = [
+  'Adventure',
+  'Spiritual',
+  'Wildlife',
+  'Beach',
+  'Culture',
+  'Snow',
+  'Trekking',
+] as const
+
+export type KnownExperience = (typeof knownExperiences)[number]
+
+/**
+ * A destination can be tagged with an experience outside the known list — the
+ * admin form allows it, and the card and detail page render it straight away.
+ * `string & {}` keeps autocomplete for the known values while permitting others.
+ * Add a new one to `knownExperiences` above to give it a filter option too.
+ */
+export type Experience = KnownExperience | (string & {})
 
 /** Buckets the detail page groups "things to do" under. */
 export type ActivityCategory = 'Adventure' | 'Spiritual' | 'Nature' | 'Culture'
@@ -95,6 +107,8 @@ export type Destination = {
   tripCount: number
   trending?: boolean
   badge?: string
+  /** Absent means published — every entry below predates drafts and stays live. */
+  status?: 'draft' | 'published'
 }
 
 export const destinations: Destination[] = [
@@ -655,16 +669,7 @@ export const regions: (Region | 'All')[] = [
   'Islands',
 ]
 
-export const experiences: (Experience | 'All')[] = [
-  'All',
-  'Adventure',
-  'Trekking',
-  'Spiritual',
-  'Wildlife',
-  'Beach',
-  'Culture',
-  'Snow',
-]
+export const experiences: (KnownExperience | 'All')[] = ['All', ...knownExperiences]
 
 export const difficulties = ['All', 'Easy', 'Easy–Moderate', 'Moderate', 'Challenging'] as const
 
@@ -692,7 +697,30 @@ export function countByRegion(region: Region | 'All'): number {
   return destinations.filter((d) => d.region === region).length
 }
 
-/** Most-reviewed first — used for "Popular Destinations" on the homepage. */
+/**
+ * The six places in the homepage "Popular Destinations" grid, in the order they
+ * appear there. Managed from /admin/destinations — an empty list falls back to
+ * the most-reviewed six, so the homepage always has something to show.
+ */
+export const featuredDestinationSlugs: string[] = [
+  'rishikesh',
+  'kedarnath',
+  'manali',
+  'ladakh',
+  'varanasi',
+  'andaman',
+]
+
+/** What the homepage renders: the hand-picked list, or the popular fallback. */
+export function homepageDestinations(limit = 6): Destination[] {
+  const picked = featuredDestinationSlugs
+    .map((slug) => destinations.find((d) => d.slug === slug))
+    .filter((d): d is Destination => Boolean(d))
+
+  return picked.length > 0 ? picked.slice(0, limit) : popularDestinations(limit)
+}
+
+/** Most-reviewed first — the fallback, and still used elsewhere. */
 export function popularDestinations(limit = 6): Destination[] {
   return [...destinations].sort((a, b) => b.reviews - a.reviews).slice(0, limit)
 }

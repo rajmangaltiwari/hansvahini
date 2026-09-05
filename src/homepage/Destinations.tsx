@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import DestinationCard from '@/src/dastination/DestinationCard'
-import { popularDestinations, destinations } from '@/src/data/destinations'
+import { homepageDestinations, destinations } from '@/src/data/destinations'
 
-// Same card as the full /destination page — the homepage just shows the top six.
-const featured = popularDestinations(6)
+// Same card as the full /destination page. Which six show up is curated
+// from /admin/destinations.
+const featured = homepageDestinations(6)
 
 export default function Destinations() {
   return (
