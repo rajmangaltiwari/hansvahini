@@ -14,6 +14,7 @@ import FormActions from '@/src/admin/forms/FormActions'
 import DraftNotice from '@/src/admin/forms/DraftNotice'
 import OutputModal from '@/src/admin/forms/OutputModal'
 import { saveDraft, clearDraft } from '@/src/admin/draftStore'
+import ImageField from '@/src/admin/forms/ImageField'
 import Repeater from '@/src/admin/forms/Repeater'
 import StringList from '@/src/admin/forms/StringList'
 import { ChipGroup, Field, SelectInput, TextArea, TextInput, Toggle } from '@/src/admin/forms/Fields'
@@ -244,8 +245,8 @@ export default function CreatePackages({ initial }: { initial?: TravelPackage })
             <TextInput id="pkg-region" value={form.region} onChange={(v) => set('region', v)} placeholder="Himalayas" />
           </Field>
 
-          <Field label="Card image URL" required htmlFor="pkg-image" className="sm:col-span-2">
-            <TextInput id="pkg-image" type="url" value={form.image} onChange={(v) => set('image', v)} placeholder="/images/ladakh.jpg" />
+          <Field label="Card image" required htmlFor="pkg-image" className="sm:col-span-2">
+            <ImageField id="pkg-image" value={form.image} onChange={(v) => set('image', v)} placeholder="/images/ladakh.jpg" folder={slug} />
           </Field>
 
           <Field label="Categories" hint="Drives the theme filters on /packages." className="sm:col-span-2">

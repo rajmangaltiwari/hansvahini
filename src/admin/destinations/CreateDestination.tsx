@@ -17,6 +17,7 @@ import FormActions from '@/src/admin/forms/FormActions'
 import DraftNotice from '@/src/admin/forms/DraftNotice'
 import OutputModal from '@/src/admin/forms/OutputModal'
 import { saveDraft, clearDraft } from '@/src/admin/draftStore'
+import ImageField from '@/src/admin/forms/ImageField'
 import Repeater from '@/src/admin/forms/Repeater'
 import StringList from '@/src/admin/forms/StringList'
 import { ChipGroup, Field, SelectInput, TextArea, TextInput, Toggle } from '@/src/admin/forms/Fields'
@@ -262,12 +263,12 @@ export default function CreateDestination({ initial }: { initial?: Destination }
             <SelectInput id="dest-region" value={form.region} onChange={(v) => set('region', v)} options={regionOptions} />
           </Field>
 
-          <Field label="Hero image URL" required hint="Full-bleed banner on the detail page." htmlFor="dest-hero">
-            <TextInput id="dest-hero" type="url" value={form.heroImage} onChange={(v) => set('heroImage', v)} placeholder="/images/spiti.jpg" />
+          <Field label="Hero image" required hint="Full-bleed banner on the detail page." htmlFor="dest-hero">
+            <ImageField id="dest-hero" value={form.heroImage} onChange={(v) => set('heroImage', v)} placeholder="/images/spiti.jpg" folder={slug} />
           </Field>
 
-          <Field label="Card image URL" required hint="Used in listing grids." htmlFor="dest-image">
-            <TextInput id="dest-image" type="url" value={form.image} onChange={(v) => set('image', v)} placeholder="/images/spiti.jpg" />
+          <Field label="Card image" required hint="Used in listing grids." htmlFor="dest-image">
+            <ImageField id="dest-image" value={form.image} onChange={(v) => set('image', v)} placeholder="/images/spiti.jpg" folder={slug} />
           </Field>
 
           <Field
@@ -334,8 +335,8 @@ export default function CreateDestination({ initial }: { initial?: Destination }
                   <Field label="Category">
                     <SelectInput value={item.category} onChange={(v) => update({ category: v })} options={attractionCategoryOptions} />
                   </Field>
-                  <Field label="Image URL">
-                    <TextInput type="url" value={item.image} onChange={(v) => update({ image: v })} placeholder="https://…" />
+                  <Field label="Image">
+                    <ImageField value={item.image} onChange={(v) => update({ image: v })} folder={slug} />
                   </Field>
                   <Field label="Time needed" hint="e.g. 2 hours, Half day.">
                     <TextInput value={item.timeNeeded} onChange={(v) => update({ timeNeeded: v })} placeholder="2 hours" />
@@ -367,8 +368,8 @@ export default function CreateDestination({ initial }: { initial?: Destination }
                   <Field label="Category">
                     <SelectInput value={item.category} onChange={(v) => update({ category: v })} options={activityCategoryOptions} />
                   </Field>
-                  <Field label="Image URL" className="sm:col-span-2">
-                    <TextInput type="url" value={item.image} onChange={(v) => update({ image: v })} placeholder="https://…" />
+                  <Field label="Image" className="sm:col-span-2">
+                    <ImageField value={item.image} onChange={(v) => update({ image: v })} folder={slug} />
                   </Field>
                   <Field label="Description" className="sm:col-span-2">
                     <TextArea rows={3} value={item.description} onChange={(v) => update({ description: v })} placeholder="What the experience involves and when it runs." />
@@ -431,8 +432,8 @@ export default function CreateDestination({ initial }: { initial?: Destination }
             >
               {(item, update) => (
                 <>
-                  <Field label="Image URL">
-                    <TextInput type="url" value={item.url} onChange={(v) => update({ url: v })} placeholder="https://…" />
+                  <Field label="Image">
+                    <ImageField value={item.url} onChange={(v) => update({ url: v })} folder={slug} />
                   </Field>
                   <Field label="Caption">
                     <TextInput value={item.caption} onChange={(v) => update({ caption: v })} placeholder="Key Monastery at golden hour" />
