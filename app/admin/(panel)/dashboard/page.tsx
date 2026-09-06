@@ -8,9 +8,11 @@ import EnquiryChart from '@/src/admin/dashboard/EnquiryChart'
 import RecentLeads from '@/src/admin/dashboard/RecentLeads'
 import TopPackages from '@/src/admin/dashboard/TopPackages'
 import ActivityFeed from '@/src/admin/dashboard/ActivityFeed'
-import { countByStatus, mediaImages } from '@/src/admin/data/adminData'
-import { travelPackages } from '@/src/data/packages'
-import { destinations } from '@/src/data/destinations'
+import { listGallery } from '@/src/lib/queries/gallery'
+import { dashboardStats, recentActivity } from '@/src/lib/queries/stats'
+import { listLeads } from '@/src/lib/queries/leads'
+import { listPackages } from '@/src/lib/queries/packages'
+import { listDestinations } from '@/src/lib/queries/destinations'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -21,7 +23,23 @@ const quickActions = [
   { label: 'Open inbox',      href: '/admin/leads',        icon: Inbox },
 ]
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Admin session, so RLS returns drafts alongside published rows.
+  const [packages, destinations, photos, stats, leads] = await Promise.all([
+    listPackages(true),
+    listDestinations(true),
+    listGallery(),
+    dashboardStats(),
+    listLeads(),
+  ])
+  const activity = await recentActivity()
+
+  // Twelve buckets ending with the current month.
+  const chartRange =
+    stats.trend.length > 0
+      ? `Monthly totals, ${stats.trend[0].month} to ${stats.trend[stats.trend.length - 1].month}`
+      : 'Monthly totals'
+
   return (
     <>
       <PageHeader
@@ -40,25 +58,25 @@ export default function DashboardPage() {
 
       {/* Headline figures */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <StatCard label="New enquiries" value={String(countByStatus('new'))} delta={12}  hint="this week"        icon={Inbox} />
-        <StatCard label="Converted"     value={String(countByStatus('converted'))} delta={8} hint="this month"   icon={TrendingUp} />
-        <StatCard label="Live packages" value={String(travelPackages.length)} delta={5}  hint="2 added recently" icon={Package} />
+        <StatCard label="New enquiries" value={String(stats.newEnquiries)} delta={stats.newDelta} hint="vs last week" icon={Inbox} />
+        <StatCard label="Converted"     value={String(stats.converted)} delta={stats.convertedDelta} hint="vs last month" icon={TrendingUp} />
+        <StatCard label="Live packages" value={String(packages.length)} hint="published and drafts" icon={Package} />
       </div>
 
       {/* Chart + activity */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
-        <Card title="Enquiry volume" subtitle="Monthly totals, September to August" className="xl:col-span-2">
-          <EnquiryChart />
+        <Card title="Enquiry volume" subtitle={chartRange} className="xl:col-span-2">
+          <EnquiryChart trend={stats.trend} />
         </Card>
         <Card title="Recent activity" subtitle="What the team changed lately">
-          <ActivityFeed />
+          <ActivityFeed entries={activity} />
         </Card>
       </div>
 
       {/* Leads + top packages */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
         <Card title="Latest enquiries" subtitle="Newest first" padded={false} className="xl:col-span-2">
-          <RecentLeads />
+          <RecentLeads leads={leads} />
         </Card>
         <Card title="Top packages" subtitle="Ranked by review volume">
           <TopPackages />
@@ -70,9 +88,9 @@ export default function DashboardPage() {
         <Card title="Content library" subtitle="What the public site is serving right now" className="xl:col-span-2">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Packages',     value: travelPackages.length, hint: 'across 10 destinations', href: '/admin/packages' },
-              { label: 'Destinations', value: destinations.length,   hint: 'place guides published',  href: '/admin/destinations' },
-              { label: 'Photos',       value: mediaImages.length,    hint: 'in the media library',    href: '/admin/gallery' },
+              { label: 'Packages',     value: packages.length,     hint: `across ${destinations.length} destinations`, href: '/admin/packages' },
+              { label: 'Destinations', value: destinations.length, hint: 'place guides',              href: '/admin/destinations' },
+              { label: 'Photos',       value: photos.length,    hint: 'in the media library',    href: '/admin/gallery' },
             ].map((item) => (
               <Link
                 key={item.label}

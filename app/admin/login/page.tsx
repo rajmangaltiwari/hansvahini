@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Quote } from 'lucide-react'
 import AdminLoginForm from '@/src/admin/AdminLoginForm'
+import SiteImage from '@/src/components/SiteImage'
 
 export const metadata: Metadata = {
   title: 'Admin Sign In — Hansvahini Expeditions',
@@ -21,11 +22,12 @@ export default function AdminLoginPage() {
 
       {/* ── Left: brand panel. Collapses away below `lg`, where the form takes the full width. ── */}
       <div className="relative hidden lg:flex flex-col justify-between bg-gray-900 p-12 overflow-hidden">
-        <img
+        <SiteImage
           src="https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=1600&q=80"
           alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
+          sizes="50vw"
+          priority
+          className="object-cover"
         />
         {/* Two stacked scrims: a vertical one so the top and bottom text clears the photo,
             and a flat one to knock the whole image back behind the type. */}
@@ -70,11 +72,11 @@ export default function AdminLoginPage() {
           <div className="grid grid-cols-3 gap-3">
             {showcase.map((place) => (
               <figure key={place.name} className="relative aspect-[4/3] rounded-xl overflow-hidden ring-1 ring-white/15">
-                <img
+                <SiteImage
                   src={place.url}
                   alt={place.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  sizes="200px"
+                  className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
                 <figcaption className="absolute bottom-0 left-0 right-0 px-3 py-2 text-[11px] font-medium text-white truncate">

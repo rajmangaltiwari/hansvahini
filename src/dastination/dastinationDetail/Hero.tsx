@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { MapPin, CalendarDays, MountainSnow, Star, Package } from 'lucide-react'
 import type { Destination } from '@/src/data/destinations'
-import { packagesForDestination } from '@/src/data/packages'
+import { packagesForDestination } from '@/src/lib/queries/packages'
 
 /** Full-bleed hero. Deliberately shows no price — a destination is a place, not a product. */
-export default function Hero({ dest }: { dest: Destination }) {
-  const packageCount = packagesForDestination(dest.slug).length
+export default async function Hero({ dest }: { dest: Destination }) {
+  const packageCount = (await packagesForDestination(dest.slug)).length
 
   return (
     <section className="relative h-[60vh] min-h-96 flex items-end overflow-hidden">

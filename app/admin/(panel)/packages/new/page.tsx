@@ -3,10 +3,14 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import CreatePackages from '@/src/admin/packages/CreatePackages'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { listPackages } from '@/src/lib/queries/packages'
 
 export const metadata: Metadata = { title: 'New Package' }
 
-export default function NewPackagePage() {
+export default async function NewPackagePage() {
+  const [destinations, packages] = await Promise.all([listDestinations(true), listPackages(true)])
+
   return (
     <>
       <Link
@@ -22,7 +26,7 @@ export default function NewPackagePage() {
         subtitle="Every field on the TravelPackage record, in the order the detail page uses them."
       />
 
-      <CreatePackages />
+      <CreatePackages destinations={destinations} liveCount={packages.length} />
     </>
   )
 }

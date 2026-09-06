@@ -1,16 +1,18 @@
 import Link from 'next/link'
 import { CalendarRange, MapPin, Star, Users } from 'lucide-react'
-import { destinations } from '@/src/data/destinations'
-import { travelPackages } from '@/src/data/packages'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { listPackages } from '@/src/lib/queries/packages'
 
-const stats = [
-  { icon: CalendarRange, value: '2016',                          label: 'Running Since' },
-  { icon: MapPin,        value: `${destinations.length}`,        label: 'Destinations' },
-  { icon: Users,         value: '12,000+',                       label: 'Travellers Hosted' },
-  { icon: Star,          value: `${travelPackages.length}`,      label: 'Curated Trips' },
-]
+export default async function AboutHero() {
+  const [destinations, packages] = await Promise.all([listDestinations(), listPackages()])
 
-export default function AboutHero() {
+  const stats = [
+    { icon: CalendarRange, value: '2016',                     label: 'Running Since' },
+    { icon: MapPin,        value: `${destinations.length}`,   label: 'Destinations' },
+    { icon: Users,         value: '12,000+',                  label: 'Travellers Hosted' },
+    { icon: Star,          value: `${packages.length}`,       label: 'Curated Trips' },
+  ]
+
   return (
     <section className="relative h-[60vh] min-h-96 flex items-end overflow-hidden">
       <div

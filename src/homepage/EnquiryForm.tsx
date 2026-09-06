@@ -1,8 +1,22 @@
-'use client'
-
 import { EnquiryFormFields } from '@/src/components/PopUpEnquiryForm'
+import type { EnquirySource } from '@/src/lib/validation/enquiry'
+import { listDestinations } from '@/src/lib/queries/destinations'
 
-export default function EnquiryForm() {
+/**
+ * The #contact section. A package detail page passes its own slug through so
+ * the lead records which trip prompted it, rather than arriving unattributed.
+ */
+export default async function EnquiryForm({
+  source = 'Website form',
+  packageSlug,
+}: {
+  source?: EnquirySource
+  packageSlug?: string
+} = {}) {
+  // A Server Component now — it held no state, and fetching here means none of
+  // its five call sites has to thread the destination list through.
+  const destinations = (await listDestinations()).map((d) => d.name)
+
   return (
     <section id="contact" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -88,7 +102,12 @@ export default function EnquiryForm() {
 
           {/* Right — Form */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-            <EnquiryFormFields idPrefix="enquiry-section" />
+            <EnquiryFormFields
+              idPrefix="enquiry-section"
+              source={source}
+              packageSlug={packageSlug}
+              destinations={destinations}
+            />
           </div>
         </div>
       </div>

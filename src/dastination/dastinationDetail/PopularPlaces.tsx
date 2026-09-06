@@ -1,5 +1,6 @@
 import { Clock } from 'lucide-react'
 import type { Destination } from '@/src/data/destinations'
+import SiteImage from '@/src/components/SiteImage'
 
 /** Grid of named places — temples, lakes, passes, beaches — inside the destination. */
 export default function PopularPlaces({ dest }: { dest: Destination }) {
@@ -22,11 +23,11 @@ export default function PopularPlaces({ dest }: { dest: Destination }) {
             >
               {/* Fixed-height frame + absolute image: the photo can never drive layout */}
               <div className="relative h-48 overflow-hidden">
-                <img
+                <SiteImage
                   src={place.image}
                   alt={place.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <span className="absolute top-4 left-4 bg-gray-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow">
                   {place.category}

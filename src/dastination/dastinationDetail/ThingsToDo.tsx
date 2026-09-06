@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { ActivityCategory, Destination } from '@/src/data/destinations'
 import { activityCategories } from '@/src/data/destinations'
+import SiteImage from '@/src/components/SiteImage'
 
 /**
  * Experiences grouped by Adventure / Spiritual / Nature / Culture.
@@ -62,11 +63,11 @@ export default function ThingsToDo({ dest }: { dest: Destination }) {
             >
               {/* Fixed-height frame + absolute image: the photo can never drive layout */}
               <div className="relative h-48 overflow-hidden">
-                <img
+                <SiteImage
                   src={item.image}
                   alt={item.title}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <span className="absolute top-4 left-4 bg-gray-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow">
                   {item.category}

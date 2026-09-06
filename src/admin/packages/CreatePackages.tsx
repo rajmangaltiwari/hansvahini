@@ -1,19 +1,17 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useTransition, type FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-  travelPackages,
   packageCategories,
   type ItineraryDay,
   type PackageCategory,
   type TravelPackage,
 } from '@/src/data/packages'
-import { destinations } from '@/src/data/destinations'
+import type { Destination } from '@/src/data/destinations'
 import FormSection from '@/src/admin/forms/FormSection'
+import { savePackage } from '@/src/server/actions/packages'
 import FormActions from '@/src/admin/forms/FormActions'
-import DraftNotice from '@/src/admin/forms/DraftNotice'
-import OutputModal from '@/src/admin/forms/OutputModal'
-import { saveDraft, clearDraft } from '@/src/admin/draftStore'
 import ImageField from '@/src/admin/forms/ImageField'
 import Repeater from '@/src/admin/forms/Repeater'
 import StringList from '@/src/admin/forms/StringList'
@@ -52,8 +50,9 @@ type PackageFormState = {
 const initialState: PackageFormState = {
   slug: '',
   title: '',
-  destinationSlug: destinations[0].slug,
-  region: destinations[0].region,
+  // Seeded from the destination list once it is known — see stateFrom below.
+  destinationSlug: '',
+  region: '',
   image: '',
   categories: [],
   durationDays: '',
@@ -82,8 +81,6 @@ const difficultyOptions: { value: Difficulty; label: string }[] = [
   { value: 'Moderate',      label: 'Moderate' },
   { value: 'Challenging',   label: 'Challenging' },
 ]
-
-const destinationOptions = destinations.map((d) => ({ value: d.slug, label: d.name }))
 
 /** `all` is a filter pseudo-category, not something a package can be tagged with. */
 const categoryOptions = packageCategories
@@ -139,12 +136,34 @@ function stateFrom(pkg: TravelPackage): PackageFormState {
  * exists, publish becomes a POST for a new record and a PUT/PATCH for an
  * existing one; the field mapping in buildPackage() is already the request body.
  */
-export default function CreatePackages({ initial }: { initial?: TravelPackage }) {
+export default function CreatePackages({
+  initial,
+  destinations,
+  liveCount = 0,
+}: {
+  initial?: TravelPackage
+  /** Options for the destination select — resolved by the route. */
+  destinations: Destination[]
+  /** How many packages exist — shown in the form footer. */
+  liveCount?: number
+}) {
+  const destinationOptions = destinations.map((d) => ({ value: d.slug, label: d.name }))
+
   const isEdit = Boolean(initial)
 
-  const [form, setForm] = useState<PackageFormState>(() => (initial ? stateFrom(initial) : initialState))
-  const [created, setCreated] = useState<TravelPackage | null>(null)
-  const [draft, setDraft] = useState<{ slug: string; stored: boolean } | null>(null)
+  const [form, setForm] = useState<PackageFormState>(() =>
+    initial
+      ? stateFrom(initial)
+      : {
+          ...initialState,
+          // A new package defaults to the first destination, as it always has.
+          destinationSlug: destinations[0]?.slug ?? '',
+          region: destinations[0]?.region ?? '',
+        }
+  )
+  const router = useRouter()
+  const [saving, startSaving] = useTransition()
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const set = <K extends keyof PackageFormState>(key: K, value: PackageFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -160,7 +179,8 @@ export default function CreatePackages({ initial }: { initial?: TravelPackage })
 
   function buildPackage(status: 'draft' | 'published'): TravelPackage {
     return {
-      id: initial?.id ?? Math.max(0, ...travelPackages.map((p) => p.id)) + 1,
+      // Assigned by the database on insert; kept only when editing.
+      id: initial?.id ?? 0,
       slug,
       title: form.title.trim(),
       destinationSlug: form.destinationSlug,
@@ -196,27 +216,38 @@ export default function CreatePackages({ initial }: { initial?: TravelPackage })
     }
   }
 
+  /**
+   * Both buttons write the same row — `status` is the only difference, and it
+   * is what RLS uses to keep drafts off the public site.
+   */
+  function persist(status: 'draft' | 'published') {
+    setSaveError(null)
+
+    startSaving(async () => {
+      const result = await savePackage(buildPackage(status))
+
+      if (!result.ok) {
+        setSaveError(result.error ?? 'That did not save.')
+        return
+      }
+
+      // Back to the list, where the new row is visible under its status tab.
+      router.push('/admin/packages')
+      router.refresh()
+    })
+  }
+
   function handleSaveDraft() {
-    const record = buildPackage('draft')
-    const stored = saveDraft('package', record.slug, record)
-    setDraft({ slug: record.slug, stored })
+    persist('draft')
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const record = buildPackage('published')
-    // Publishing supersedes the draft, so it should not linger in the preview.
-    clearDraft('package', record.slug)
-    setDraft(null)
-    setCreated(record)
+    persist('published')
   }
 
   return (
     <>
-      {draft && (
-        <DraftNotice slug={draft.slug} stored={draft.stored} previewHref={`/admin/packages/${draft.slug}/preview`} />
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-4">
 
         <FormSection title="Basics" description="What the trip is called and where it goes.">
@@ -385,19 +416,13 @@ export default function CreatePackages({ initial }: { initial?: TravelPackage })
           cancelHref="/admin/packages"
           submitLabel={isEdit ? 'Publish changes' : 'Publish package'}
           onSaveDraft={handleSaveDraft}
-          previewHref={draft || isEdit ? `/admin/packages/${slug}/preview` : undefined}
-          note="No backend yet — drafts are held in this browser and publishing shows the record to paste into the data file."
+          busy={saving}
+          error={saveError}
+          previewHref={isEdit ? `/admin/packages/${slug}/preview` : undefined}
+          note={`${liveCount} package${liveCount === 1 ? '' : 's'} in the catalogue.`}
         />
       </form>
 
-      {created && (
-        <OutputModal
-          title={isEdit ? 'Updated package record' : 'Package record'}
-          targetFile="src/data/packages.ts → travelPackages"
-          payload={created}
-          onClose={() => setCreated(null)}
-        />
-      )}
     </>
   )
 }

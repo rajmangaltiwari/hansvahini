@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useState, useTransition, type FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   activityCategories,
-  destinations,
   knownExperiences,
   regions,
   type ActivityCategory,
@@ -13,10 +13,8 @@ import {
   type Region,
 } from '@/src/data/destinations'
 import FormSection from '@/src/admin/forms/FormSection'
+import { saveDestination } from '@/src/server/actions/destinations'
 import FormActions from '@/src/admin/forms/FormActions'
-import DraftNotice from '@/src/admin/forms/DraftNotice'
-import OutputModal from '@/src/admin/forms/OutputModal'
-import { saveDraft, clearDraft } from '@/src/admin/draftStore'
 import ImageField from '@/src/admin/forms/ImageField'
 import Repeater from '@/src/admin/forms/Repeater'
 import StringList from '@/src/admin/forms/StringList'
@@ -157,12 +155,20 @@ function stateFrom(dest: Destination): DestinationFormState {
  * exists, publish becomes a POST for a new record and a PUT/PATCH for an
  * existing one; the field mapping in buildDestination() is already the body.
  */
-export default function CreateDestination({ initial }: { initial?: Destination }) {
+export default function CreateDestination({
+  initial,
+  liveCount = 0,
+}: {
+  initial?: Destination
+  /** How many destinations exist — shown in the form footer. */
+  liveCount?: number
+}) {
   const isEdit = Boolean(initial)
 
   const [form, setForm] = useState<DestinationFormState>(() => (initial ? stateFrom(initial) : initialState))
-  const [created, setCreated] = useState<Destination | null>(null)
-  const [draft, setDraft] = useState<{ slug: string; stored: boolean } | null>(null)
+  const router = useRouter()
+  const [saving, startSaving] = useTransition()
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const set = <K extends keyof DestinationFormState>(key: K, value: DestinationFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -223,27 +229,38 @@ export default function CreateDestination({ initial }: { initial?: Destination }
     }
   }
 
+  /**
+   * Both buttons write the same row — `status` is the only difference, and it
+   * is what RLS uses to keep drafts off the public site.
+   */
+  function persist(status: 'draft' | 'published') {
+    setSaveError(null)
+
+    startSaving(async () => {
+      const result = await saveDestination(buildDestination(status))
+
+      if (!result.ok) {
+        setSaveError(result.error ?? 'That did not save.')
+        return
+      }
+
+      // Back to the list, where the new row is visible under its status tab.
+      router.push('/admin/destinations')
+      router.refresh()
+    })
+  }
+
   function handleSaveDraft() {
-    const record = buildDestination('draft')
-    const stored = saveDraft('destination', record.slug, record)
-    setDraft({ slug: record.slug, stored })
+    persist('draft')
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const record = buildDestination('published')
-    // Publishing supersedes the draft, so it should not linger in the preview.
-    clearDraft('destination', record.slug)
-    setDraft(null)
-    setCreated(record)
+    persist('published')
   }
 
   return (
     <>
-      {draft && (
-        <DraftNotice slug={draft.slug} stored={draft.stored} previewHref={`/admin/destinations/${draft.slug}/preview`} />
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-4">
 
         <FormSection title="Basics" description="Identity and the two images the place is shown with.">
@@ -493,19 +510,13 @@ export default function CreateDestination({ initial }: { initial?: Destination }
           cancelHref="/admin/destinations"
           submitLabel={isEdit ? 'Publish changes' : 'Publish destination'}
           onSaveDraft={handleSaveDraft}
-          previewHref={draft || isEdit ? `/admin/destinations/${slug}/preview` : undefined}
-          note={`No backend yet — drafts are held in this browser. ${destinations.length} destinations live.`}
+          busy={saving}
+          error={saveError}
+          previewHref={isEdit ? `/admin/destinations/${slug}/preview` : undefined}
+          note={`${liveCount} destination${liveCount === 1 ? '' : 's'} in the catalogue.`}
         />
       </form>
 
-      {created && (
-        <OutputModal
-          title={isEdit ? 'Updated destination record' : 'Destination record'}
-          targetFile="src/data/destinations.ts → destinations"
-          payload={created}
-          onClose={() => setCreated(null)}
-        />
-      )}
     </>
   )
 }

@@ -1,12 +1,32 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Bell, LogOut, Menu, Search, Settings, User } from 'lucide-react'
+import { Bell, LogOut, Menu, Search } from 'lucide-react'
 import { navItemFor } from './adminNav'
+import { signOut } from '@/src/server/actions/auth'
 
-export default function AdminTopbar({ onOpenNav }: { onOpenNav: () => void }) {
+/** Initials for the avatar: "Raj Mangal" → RM, "rajmangal" → RA. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export default function AdminTopbar({
+  onOpenNav,
+  user,
+  newLeads = 0,
+}: {
+  onOpenNav: () => void
+  /** The signed-in admin. Absent only before the session resolves. */
+  user?: { name: string; email: string }
+  newLeads?: number
+}) {
+  const router = useRouter()
+  const [search, setSearch] = useState('')
   const pathname = usePathname()
   const current = navItemFor(pathname)
 
@@ -52,23 +72,40 @@ export default function AdminTopbar({ onOpenNav }: { onOpenNav: () => void }) {
         </div>
 
         {/* Search — decorative for now, wired to nothing */}
-        <div className="hidden md:flex items-center ml-auto relative">
+        {/* Hands the term to the leads inbox, which filters on it. */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const term = search.trim()
+            if (!term) return
+            router.push(`/admin/leads?q=${encodeURIComponent(term)}`)
+          }}
+          className="hidden md:flex items-center ml-auto relative"
+        >
           <Search className="w-4 h-4 text-gray-300 absolute left-3 pointer-events-none" />
           <input
             type="search"
-            placeholder="Search leads, packages…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search enquiries…"
+            aria-label="Search enquiries"
             className="w-56 lg:w-72 border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors"
           />
-        </div>
+        </form>
 
         <div className="flex items-center gap-1 ml-auto md:ml-2">
-          <button
+          {/* The dot tracks unread enquiries rather than being decorative. */}
+          <Link
+            href="/admin/leads"
             className="relative p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            aria-label="Notifications"
+            aria-label={newLeads > 0 ? `${newLeads} new enquiries` : 'No new enquiries'}
+            title={newLeads > 0 ? `${newLeads} new enquir${newLeads === 1 ? 'y' : 'ies'}` : 'No new enquiries'}
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
+            {newLeads > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+            )}
+          </Link>
 
           <div className="relative" ref={menuRef}>
             <button
@@ -78,10 +115,10 @@ export default function AdminTopbar({ onOpenNav }: { onOpenNav: () => void }) {
               className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <span className="w-8 h-8 rounded-full bg-gray-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">
-                RT
+                {initials(user?.name ?? '')}
               </span>
               <span className="hidden sm:block text-left leading-tight">
-                <span className="block text-xs font-semibold text-gray-900">Raj Mangal</span>
+                <span className="block text-xs font-semibold text-gray-900">{user?.name ?? 'Signed in'}</span>
                 <span className="block text-[10px] text-gray-400">Administrator</span>
               </span>
             </button>
@@ -92,21 +129,19 @@ export default function AdminTopbar({ onOpenNav }: { onOpenNav: () => void }) {
                 className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 overflow-hidden"
               >
                 <div className="px-3 py-2 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-900">Raj Mangal</p>
-                  <p className="text-[11px] text-gray-400 truncate">admin@hansvahini.com</p>
+                  <p className="text-xs font-semibold text-gray-900">{user?.name ?? 'Signed in'}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
                 </div>
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                  <User className="w-4 h-4 text-gray-400" /> Profile
-                </button>
-                <button className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                  <Settings className="w-4 h-4 text-gray-400" /> Settings
-                </button>
-                <Link
-                  href="/admin/login"
-                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors border-t border-gray-100 mt-1 pt-2"
-                >
-                  <LogOut className="w-4 h-4 text-gray-400" /> Sign out
-                </Link>
+                {/* Profile and Settings were buttons that did nothing; sign out
+                    is the only real action, so it is the only one offered. */}
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 text-gray-400" /> Sign out
+                  </button>
+                </form>
               </div>
             )}
           </div>

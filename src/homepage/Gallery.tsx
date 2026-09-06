@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Camera, Expand } from 'lucide-react'
 import Lightbox from '@/src/components/Lightbox'
-import { destinations, type GalleryImage } from '@/src/data/destinations'
+import SiteImage from '@/src/components/SiteImage'
+import { type Destination, type GalleryImage } from '@/src/data/destinations'
 
 /** A gallery photo that remembers which destination it came from. */
 type Shot = GalleryImage & { place: string; slug: string }
@@ -34,16 +35,24 @@ function shuffle<T>(items: T[], seed: number): T[] {
   return out
 }
 
-// Every photo across every destination guide, mixed so the rows are not grouped by place.
-const everyShot: Shot[] = destinations.flatMap((dest) =>
-  dest.gallery.map((image) => ({ ...image, place: dest.name, slug: dest.slug }))
-)
+// Every photo across every destination guide, mixed so the rows are not grouped
+// by place. Built per render now: the destinations arrive as a prop, because a
+// Client Component cannot read the database.
+function buildRows(destinations: Destination[]): Shot[][] {
+  const everyShot: Shot[] = destinations.flatMap((dest) =>
+    dest.gallery.map((image) => ({ ...image, place: dest.name, slug: dest.slug }))
+  )
 
-// 24 is enough to read as endless once each row is duplicated, without shipping 96 images.
-const shots = shuffle(everyShot, 20260905).slice(0, 24)
-const rows = [shots.slice(0, 12), shots.slice(12)]
+  // 24 is enough to read as endless once each row is duplicated, without
+  // shipping 96 images. The seed is fixed, so server and client agree.
+  const shots = shuffle(everyShot, 20260905).slice(0, 24)
+  return [shots.slice(0, 12), shots.slice(12)]
+}
 
-export default function Gallery() {
+export default function Gallery({ destinations }: { destinations: Destination[] }) {
+  const rows = buildRows(destinations)
+  const shots = rows.flat()
+
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   return (
@@ -91,11 +100,11 @@ export default function Gallery() {
                         aria-label={`View photo: ${shot.caption}`}
                         className="group/tile relative block w-64 sm:w-72 aspect-[4/3] rounded-2xl overflow-hidden bg-gray-800"
                       >
-                        <img
+                        <SiteImage
                           src={shot.url}
                           alt={shot.caption}
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover/tile:scale-105"
+                          sizes="(min-width: 640px) 288px, 256px"
+                          className="object-cover transition-transform duration-500 group-hover/tile:scale-105"
                         />
                         <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-70 group-hover/tile:opacity-100 transition-opacity" />
 

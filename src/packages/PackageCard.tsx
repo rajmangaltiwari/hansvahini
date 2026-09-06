@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Clock, Star, Users, MapPin } from 'lucide-react'
 import { formatPrice, packageCategories, type TravelPackage } from '@/src/data/packages'
+import BookNowButton from './BookNowButton'
+import SiteImage from '@/src/components/SiteImage'
 
 const labelFor = (id: string) =>
   packageCategories.find((c) => c.id === id)?.label.replace(' Packages', '') ?? id
@@ -27,10 +29,11 @@ export default function PackageCard({
     <article className="group bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
       <Link href={`/packages/${pkg.slug}`} className="block">
         <div className="relative h-52 overflow-hidden">
-          <img
+          <SiteImage
             src={pkg.image}
             alt={pkg.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
           <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
@@ -134,12 +137,10 @@ export default function PackageCard({
           >
             View Details
           </Link>
-          <a
-            href="#contact"
+          <BookNowButton
+            packageSlug={pkg.slug}
             className="flex-1 text-center bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-full hover:bg-gray-700 transition-colors"
-          >
-            Book Now
-          </a>
+          />
         </div>
       </div>
     </article>

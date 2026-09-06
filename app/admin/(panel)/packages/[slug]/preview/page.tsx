@@ -1,14 +1,14 @@
 import type { Metadata } from 'next'
 import PackagePreview from '@/src/admin/packages/PackagePreview'
-import { getPackageBySlug } from '@/src/data/packages'
+import { getPackageBySlug } from '@/src/lib/queries/packages'
 
 export const metadata: Metadata = { title: 'Package Preview' }
 
 /**
- * The published record is resolved on the server; the client component prefers a
- * locally saved draft when there is one, so unpublished work can be previewed.
+ * Resolved entirely on the server. The admin's session lets RLS return draft
+ * rows too, so unpublished work previews without any client-side draft store.
  */
 export default async function PackagePreviewPage(props: PageProps<'/admin/packages/[slug]/preview'>) {
   const { slug } = await props.params
-  return <PackagePreview slug={slug} published={getPackageBySlug(slug) ?? null} />
+  return <PackagePreview slug={slug} record={(await getPackageBySlug(slug, true)) ?? null} />
 }

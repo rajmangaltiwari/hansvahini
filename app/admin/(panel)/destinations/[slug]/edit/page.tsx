@@ -4,13 +4,15 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Eye } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import CreateDestination from '@/src/admin/destinations/CreateDestination'
-import { getDestinationBySlug } from '@/src/data/destinations'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { getDestinationBySlug } from '@/src/lib/queries/destinations'
 
 export const metadata: Metadata = { title: 'Edit Destination' }
 
 export default async function EditDestinationPage(props: PageProps<'/admin/destinations/[slug]/edit'>) {
   const { slug } = await props.params
-  const dest = getDestinationBySlug(slug)
+  const [dest, all] = await Promise.all([getDestinationBySlug(slug, true), listDestinations(true)])
+  const liveCount = all.length
   if (!dest) notFound()
 
   return (
@@ -37,7 +39,7 @@ export default async function EditDestinationPage(props: PageProps<'/admin/desti
         }
       />
 
-      <CreateDestination initial={dest} />
+      <CreateDestination initial={dest} liveCount={liveCount} />
     </>
   )
 }

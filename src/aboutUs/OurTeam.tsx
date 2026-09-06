@@ -1,3 +1,5 @@
+import SiteImage from '@/src/components/SiteImage'
+
 const team = [
   {
     name: 'Raj Mangal',
@@ -44,11 +46,11 @@ export default function OurTeam() {
             >
               {/* Fixed aspect box — the image is absolutely positioned so it cannot set the height */}
               <div className="relative aspect-[4/5] bg-gray-100">
-                <img
+                <SiteImage
                   src={person.image}
                   alt={person.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                  className="object-cover"
                 />
               </div>
               <div className="p-5">

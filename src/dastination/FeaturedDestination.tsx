@@ -1,12 +1,17 @@
 import Link from 'next/link'
 import { Package, MapPin, MountainSnow, CalendarDays, Star } from 'lucide-react'
-import { formatPrice, fromPrice } from '@/src/data/packages'
-import { destinations } from '@/src/data/destinations'
+import { formatPrice } from '@/src/data/packages'
+import SiteImage from '@/src/components/SiteImage'
+import { fromPrice } from '@/src/lib/queries/packages'
+import { popularDestinations } from '@/src/lib/queries/destinations'
 
-// The spotlight is whichever destination has the most reviews.
-const featured = [...destinations].sort((a, b) => b.reviews - a.reviews)[0]
+export default async function FeaturedDestination() {
+  // The spotlight is whichever destination has the most reviews.
+  const featured = (await popularDestinations(1))[0]
+  if (!featured) return null
 
-export default function FeaturedDestination() {
+  const from = await fromPrice(featured.slug)
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,10 +24,11 @@ export default function FeaturedDestination() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           {/* Image */}
           <div className="relative rounded-2xl overflow-hidden shadow-sm h-80 lg:h-[440px]">
-            <img
+            <SiteImage
               src={featured.heroImage}
               alt={featured.name}
-              className="w-full h-full object-cover"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
             />
             <div className="absolute top-5 left-5 bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-full shadow">
               {featured.region}
@@ -31,7 +37,7 @@ export default function FeaturedDestination() {
               <div>
                 <p className="text-xs text-gray-500">Packages from</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatPrice(fromPrice(featured.slug))}
+                  {formatPrice(from)}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 text-sm">

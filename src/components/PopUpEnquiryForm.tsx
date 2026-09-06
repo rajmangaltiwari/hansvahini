@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { destinations } from '@/src/data/destinations'
+import { submitEnquiry } from '@/src/server/actions/leads'
+import { HONEYPOT_FIELD, initialEnquiryState, type EnquirySource } from '@/src/lib/validation/enquiry'
 
 type FormState = {
   name: string
@@ -24,27 +25,81 @@ const initialState: FormState = {
   message: '',
 }
 
-const destinationOptions = [...destinations.map((d) => d.name), 'Other / Custom']
 const travellerOptions = ['1', '2', '3–5', '6–10', '10+']
 
 const inputClass =
   'w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs sm:text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors'
 const labelClass =
   'block text-[11px] font-medium text-gray-600 mb-1 uppercase tracking-wide'
+const errorClass = 'mt-1 text-[11px] text-red-600'
+
+/**
+ * Set once an enquiry has been sent from anywhere on the page.
+ *
+ * Both components live in this module, so a plain flag is enough — no context
+ * for one boolean, and no subscription either, because it is only ever read at
+ * the moment the pop-up decides whether to appear. It stops us asking again
+ * for details someone has just finished typing into the page.
+ */
+let enquirySent = false
+
+function markEnquirySent() {
+  enquirySent = true
+}
+
+/** What the modal should ask about when opened deliberately. */
+export type EnquiryContext = { source?: EnquirySource; packageSlug?: string }
+
+/**
+ * The mounted pop-up registers itself here so anything on the page can open it.
+ *
+ * A module-level handler rather than context: the pop-up lives in the root
+ * layout and the buttons that open it are scattered across Server Component
+ * trees, so there is no shared provider to hang a context off.
+ */
+let openHandler: ((context: EnquiryContext) => void) | null = null
+
+/** Opens the enquiry modal. No-op if the pop-up is not mounted (e.g. on /admin). */
+export function openEnquiryPopup(context: EnquiryContext = {}) {
+  openHandler?.(context)
+}
 
 /**
  * The enquiry form fields component, shared by the homepage section and the pop-up modal.
+ *
+ * `source` and `packageSlug` ride along as hidden inputs so the admin can tell
+ * a pop-up enquiry from one raised on a specific package page.
  */
 export function EnquiryFormFields({
   idPrefix = 'enquiry',
   onSubmitted,
+  source = 'Website form',
+  packageSlug,
+  destinations = [],
 }: {
   idPrefix?: string
   onSubmitted?: () => void
+  source?: EnquirySource
+  packageSlug?: string
+  /** Destination names for the select, resolved by a Server Component. */
+  destinations?: string[]
 }) {
+  const destinationOptions = [...destinations, 'Other / Custom']
+
+  const [state, formAction, pending] = useActionState(submitEnquiry, initialEnquiryState)
   const [form, setForm] = useState<FormState>(initialState)
   const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
+
+  // useActionState has no reset, so the success panel is held locally — that is
+  // what lets "Submit another enquiry" put the form back.
+  const announced = useRef(false)
+  useEffect(() => {
+    if (!state.ok || announced.current) return
+    announced.current = true
+    setSubmitted(true)
+    markEnquirySent()
+    onSubmitted?.()
+  }, [state.ok, onSubmitted])
 
   const id = (field: string) => `${idPrefix}-${field}`
 
@@ -52,16 +107,6 @@ export function EnquiryFormFields({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      setSubmitted(true)
-      onSubmitted?.()
-    }, 1000)
   }
 
   if (submitted) {
@@ -79,6 +124,7 @@ export function EnquiryFormFields({
         </p>
         <button
           onClick={() => {
+            announced.current = false
             setSubmitted(false)
             setForm(initialState)
           }}
@@ -91,7 +137,42 @@ export function EnquiryFormFields({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-3.5">
+    <form action={formAction} className="space-y-3.5">
+      <input type="hidden" name="source" value={source} />
+      {/*
+        Stamped from a ref callback rather than during render: Date.now() is
+        impure, and this runs once the input exists in the DOM. A submission
+        faster than a person could type is treated as automated — the action
+        skips the check entirely if this never gets set.
+      */}
+      <input
+        type="hidden"
+        name="startedAt"
+        ref={(el) => {
+          if (el && !el.value) el.value = String(Date.now())
+        }}
+      />
+
+      {/* Honeypot: off-screen, unreachable by tab, hidden from screen readers.
+          Only a bot filling every input will put anything in it. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] w-px h-px overflow-hidden">
+        <label htmlFor={id('company')}>Company (leave this blank)</label>
+        <input
+          id={id('company')}
+          name={HONEYPOT_FIELD}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+      {packageSlug && <input type="hidden" name="packageSlug" value={packageSlug} />}
+
+      {state.formError && (
+        <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {state.formError}
+        </p>
+      )}
+
       {/* Name + phone */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
@@ -108,6 +189,7 @@ export function EnquiryFormFields({
             placeholder="Raj Kumar"
             className={inputClass}
           />
+          {state.errors?.name && <p className={errorClass}>{state.errors.name}</p>}
         </div>
         <div>
           <label htmlFor={id('phone')} className={labelClass}>
@@ -123,6 +205,7 @@ export function EnquiryFormFields({
             placeholder="+91 98765 43210"
             className={inputClass}
           />
+          {state.errors?.phone && <p className={errorClass}>{state.errors.phone}</p>}
         </div>
       </div>
 
@@ -141,6 +224,7 @@ export function EnquiryFormFields({
           placeholder="you@email.com"
           className={inputClass}
         />
+        {state.errors?.email && <p className={errorClass}>{state.errors.email}</p>}
       </div>
 
       {/* Destination */}
@@ -217,10 +301,10 @@ export function EnquiryFormFields({
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={pending}
         className="w-full bg-gray-900 text-white text-sm font-semibold py-2.5 rounded-full hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading ? 'Sending Enquiry…' : 'Send Enquiry'}
+        {pending ? 'Sending Enquiry…' : 'Send Enquiry'}
       </button>
     </form>
   )
@@ -235,28 +319,108 @@ const FOCUSABLE =
 /**
  * Timed enquiry pop-up modal component, mounted once in the root layout.
  */
-export default function PopUpEnquiryForm() {
+export default function PopUpEnquiryForm({ destinations = [] }: { destinations?: string[] }) {
   const pathname = usePathname()
   // The admin panel is a working tool — the marketing pop-up has no business there.
   const suppressed = pathname.startsWith('/admin')
 
   const [open, setOpen] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
   const [visible, setVisible] = useState(false)
+  /** Set when opened from a Book Now button, so the lead records which trip. */
+  const [context, setContext] = useState<EnquiryContext>({})
 
   const dialogRef = useRef<HTMLDivElement>(null)
 
+  /**
+   * These are refs, not state: nothing renders from them, and they are read
+   * inside the timer and observer callbacks where a stale closure over state
+   * would silently make the wrong decision.
+   */
+  const elapsed = useRef(false)
+  const contactInView = useRef(false)
+  /** Latches, so the pop-up appears at most once and never returns after a close. */
+  const opened = useRef(false)
+
   const close = useCallback(() => {
     setVisible(false)
-    setDismissed(true)
     setTimeout(() => setOpen(false), 200)
   }, [])
 
+  /**
+   * Called from the timer and from the observer — both external events, so the
+   * open decision lives here rather than in an effect body.
+   */
+  const maybeOpen = useCallback(() => {
+    if (opened.current || suppressed) return
+    if (!elapsed.current || contactInView.current || enquirySent) return
+
+    opened.current = true
+    setOpen(true)
+  }, [suppressed])
+
   useEffect(() => {
-    if (dismissed || suppressed) return
-    const timer = setTimeout(() => setOpen(true), POPUP_DELAY_MS)
+    if (suppressed) return
+    const timer = setTimeout(() => {
+      elapsed.current = true
+      maybeOpen()
+    }, POPUP_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [dismissed, suppressed])
+  }, [suppressed, maybeOpen])
+
+  /**
+   * Register the opener. A deliberate click bypasses every rule the timed
+   * pop-up follows — the visitor asked for it, so it opens even if they are
+   * looking at the inline form or have already sent an enquiry.
+   */
+  useEffect(() => {
+    if (suppressed) return
+
+    openHandler = (next) => {
+      opened.current = true
+      setContext(next)
+      setOpen(true)
+    }
+    return () => {
+      openHandler = null
+    }
+  }, [suppressed])
+
+  /**
+   * Watch the inline enquiry section. Interrupting someone who is part-way
+   * through that form with a modal containing the same fields is the worst
+   * moment this pop-up could pick.
+   *
+   * Re-observed per route: the section exists on the homepage, /destination and
+   * /packages, but not on /about or the policy pages — where getElementById
+   * returns null and the pop-up behaves as it always did.
+   */
+  useEffect(() => {
+    if (suppressed) return
+
+    const section = document.getElementById('contact')
+    if (!section) {
+      // /about and the policy pages have no enquiry section to avoid.
+      contactInView.current = false
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        contactInView.current = entry.isIntersecting
+        // Opening is deferred, not cancelled: if the delay ran out while the
+        // form was on screen, the pop-up appears once they scroll away.
+        if (!entry.isIntersecting) maybeOpen()
+      },
+      // Any sliver on screen counts as "they are looking at the form".
+      { threshold: 0 }
+    )
+    observer.observe(section)
+
+    return () => {
+      observer.disconnect()
+      contactInView.current = false
+    }
+  }, [suppressed, pathname, maybeOpen])
 
   useEffect(() => {
     if (!open) return
@@ -349,7 +513,12 @@ export default function PopUpEnquiryForm() {
             </p>
           </div>
 
-          <EnquiryFormFields idPrefix="enquiry-modal" />
+          <EnquiryFormFields
+              idPrefix="enquiry-modal"
+              source={context.source ?? 'Pop-up form'}
+              packageSlug={context.packageSlug}
+              destinations={destinations}
+            />
         </div>
       </div>
     </div>

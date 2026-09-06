@@ -1,30 +1,45 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, Images, MapPin, Package, Pencil, Search, Star, Trash2 } from 'lucide-react'
 import FeaturedBar, { FeaturedStar } from '@/src/admin/FeaturedBar'
-import OutputModal from '@/src/admin/forms/OutputModal'
-import { FEATURED_LIMIT, readPicks, savePicks } from '@/src/admin/featuredStore'
-import {
+import { FEATURED_LIMIT } from '@/src/admin/featuredStore'
+import { setFeaturedPicks } from '@/src/server/actions/featured'
+import { deleteDestination } from '@/src/server/actions/destinations'
+import ConfirmDialog from '@/src/admin/ui/ConfirmDialog'
+import { regions, type Destination, type Region } from '@/src/data/destinations'
+
+/**
+ * The list, the per-destination package counts and the current homepage picks
+ * all arrive as props — this is a Client Component and cannot query.
+ */
+export default function DestinationsGrid({
   destinations,
-  featuredDestinationSlugs,
-  regions,
-  type Region,
-} from '@/src/data/destinations'
-import { packagesForDestination } from '@/src/data/packages'
+  packageCounts,
+  featured,
+}: {
+  destinations: Destination[]
+  packageCounts: Record<string, number>
+  featured: string[]
+}) {
+  const nameFor = (slug: string) => destinations.find((d) => d.slug === slug)?.name ?? slug
 
-const nameFor = (slug: string) =>
-  destinations.find((d) => d.slug === slug)?.name ?? slug
-
-export default function DestinationsGrid() {
+  const router = useRouter()
   const [region, setRegion] = useState<Region | 'All'>('All')
+  /** Publication state is a separate axis from region, so it gets its own tabs. */
+  const [status, setStatus] = useState<'all' | 'published' | 'draft'>('all')
   const [query, setQuery]   = useState('')
 
-  // Seeded from what this session last chose, else from the live homepage list.
-  const [saved, setSaved] = useState<string[]>(() => readPicks('destination') ?? featuredDestinationSlugs)
-  const [picks, setPicks] = useState<string[]>(saved)
-  const [savedList, setSavedList] = useState<string[] | null>(null)
+  /** The row awaiting confirmation, or null when the dialog is closed. */
+  const [confirming, setConfirming] = useState<{ slug: string; label: string } | null>(null)
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  // Seeded from the picks stored in the database.
+  const [saved, setSaved] = useState<string[]>(featured)
+  const [picks, setPicks] = useState<string[]>(featured)
 
   const dirty = picks.length !== saved.length || picks.some((slug, i) => slug !== saved[i])
 
@@ -37,9 +52,34 @@ export default function DestinationsGrid() {
   }
 
   function handleSave() {
-    savePicks('destination', picks)
-    setSaved(picks)
-    setSavedList(picks)
+    setError(null)
+    startTransition(async () => {
+      const result = await setFeaturedPicks('destination', picks)
+      if (!result.ok) {
+        setError(result.error ?? 'Those picks could not be saved.')
+        return
+      }
+      setSaved(picks)
+      router.refresh()
+    })
+  }
+
+  function confirmRemove() {
+    if (!confirming) return
+    const { slug } = confirming
+
+    setError(null)
+    startTransition(async () => {
+      const result = await deleteDestination(slug)
+      setConfirming(null)
+
+      if (!result.ok) {
+        // Most often: packages still run there, and the FK refuses.
+        setError(result.error ?? 'That destination could not be deleted.')
+        return
+      }
+      router.refresh()
+    })
   }
 
   const filtered = useMemo(() => {
@@ -47,10 +87,15 @@ export default function DestinationsGrid() {
 
     return destinations.filter((dest) => {
       if (region !== 'All' && dest.region !== region) return false
+      // Records that predate drafts carry no status and count as published.
+      if (status !== 'all' && (dest.status ?? 'published') !== status) return false
       if (!q) return true
       return `${dest.name} ${dest.region} ${dest.tagline}`.toLowerCase().includes(q)
     })
-  }, [region, query])
+  }, [destinations, region, status, query])
+
+  const countFor = (id: 'all' | 'published' | 'draft') =>
+    id === 'all' ? destinations.length : destinations.filter((d) => (d.status ?? 'published') === id).length
 
   return (
     <>
@@ -62,6 +107,36 @@ export default function DestinationsGrid() {
         onSave={handleSave}
         dirty={dirty}
       />
+
+      {error && (
+        <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
+      {/* Publication state — a separate axis from the region chips below. */}
+      <div className="flex items-center gap-1.5 mb-3">
+        {([
+          { id: 'all', label: 'All' },
+          { id: 'published', label: 'Published' },
+          { id: 'draft', label: 'Drafts' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setStatus(tab.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              status === tab.id
+                ? 'bg-gray-900 text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+            <span className={status === tab.id ? 'ml-1.5 text-gray-400' : 'ml-1.5 text-gray-300'}>
+              {countFor(tab.id)}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -130,7 +205,7 @@ export default function DestinationsGrid() {
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-1">
                   <Package className="w-3.5 h-3.5 text-gray-300" />
-                  {packagesForDestination(dest.slug).length} packages
+                  {packageCounts[dest.slug] ?? 0} packages
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Images className="w-3.5 h-3.5 text-gray-300" />
@@ -165,7 +240,9 @@ export default function DestinationsGrid() {
                   <Eye className="w-4 h-4" />
                 </Link>
                 <button
-                  className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                  onClick={() => setConfirming({ slug: dest.slug, label: dest.name })}
+                  disabled={pending}
+                  className="p-2 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 disabled:opacity-40 transition-colors"
                   aria-label={`Delete ${dest.name}`}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -176,14 +253,6 @@ export default function DestinationsGrid() {
         ))}
       </div>
 
-      {savedList && (
-        <OutputModal
-          title="Homepage destinations"
-          targetFile="src/data/destinations.ts → featuredDestinationSlugs"
-          payload={savedList}
-          onClose={() => setSavedList(null)}
-        />
-      )}
 
       {filtered.length === 0 && (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm px-5 py-14 text-center">
@@ -191,6 +260,15 @@ export default function DestinationsGrid() {
           <p className="mt-1 text-xs text-gray-400">Try another region or clear the search.</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={`Delete this destination?`}
+        message={`“${confirming?.label ?? ''}” will be removed permanently. This cannot be undone.`}
+        busy={pending}
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirming(null)}
+      />
     </>
   )
 }

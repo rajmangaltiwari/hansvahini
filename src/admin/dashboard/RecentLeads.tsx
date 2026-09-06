@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { leads, formatDate } from '@/src/admin/data/adminData'
+import { formatDate } from '@/src/admin/data/adminData'
+import type { LeadWithNotes } from '@/src/lib/queries/leads'
 import StatusBadge from '@/src/admin/ui/StatusBadge'
 
 /** The five newest enquiries. The full list lives at /admin/leads. */
-export default function RecentLeads() {
+export default function RecentLeads({ leads }: { leads: LeadWithNotes[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -16,6 +17,13 @@ export default function RecentLeads() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
+          {leads.length === 0 && (
+            <tr>
+              <td colSpan={4} className="px-5 py-8 text-center text-xs text-gray-400">
+                No enquiries yet. They appear here the moment someone uses the form.
+              </td>
+            </tr>
+          )}
           {leads.slice(0, 5).map((lead) => (
             <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-5 py-3">

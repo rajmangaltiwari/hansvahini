@@ -1,11 +1,17 @@
-import { destinations, regions, countByRegion } from '@/src/data/destinations'
+import { regions, type Destination } from '@/src/data/destinations'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import SiteImage from '@/src/components/SiteImage'
 
 // One representative image per region, taken from the first destination in it.
-function regionImage(region: string): string {
-  return destinations.find((d) => d.region === region)?.image ?? '/images/hero.jpg'
+// The list is passed in rather than imported — it comes from the database now.
+function regionImage(list: Destination[], region: string): string {
+  return list.find((d) => d.region === region)?.image ?? '/images/hero.jpg'
 }
 
-export default function RegionStrip() {
+export default async function RegionStrip() {
+  const destinations = await listDestinations()
+  const countByRegion = (region: string) => destinations.filter((d) => d.region === region).length
+
   const realRegions = regions.filter((r) => r !== 'All')
 
   return (
@@ -28,10 +34,11 @@ export default function RegionStrip() {
               href="#explore"
               className="group relative h-40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
-              <img
-                src={regionImage(region)}
+              <SiteImage
+                src={regionImage(destinations, region)}
                 alt={region}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20 group-hover:from-black/85 transition-colors" />
               <div className="absolute inset-x-0 bottom-0 p-4">

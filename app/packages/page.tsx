@@ -1,4 +1,3 @@
-import type { Metadata } from 'next'
 import Header from '@/src/components/Header'
 import Footer from '@/src/components/Footer'
 import PackagesHero from '@/src/packages/PackagesHero'
@@ -9,16 +8,20 @@ import PackagesFaq from '@/src/packages/PackagesFaq'
 import PackagesCta from '@/src/packages/PackagesCta'
 import Testimonials from '@/src/homepage/Testimonials'
 import EnquiryForm from '@/src/homepage/EnquiryForm'
-import {
-  packageCategories,
-  packageDestinations,
-  type PackageCategory,
-} from '@/src/data/packages'
+import { packageCategories, type PackageCategory } from '@/src/data/packages'
+import { listPackages, packageDestinations } from '@/src/lib/queries/packages'
 
-export const metadata: Metadata = {
-  title: 'Travel Packages — Family, Honeymoon & Adventure Trips | Hansvahini Expeditions',
-  description:
-    'Browse 18 curated travel packages across India. Filter by family, honeymoon, adventure, pilgrimage, wildlife and luxury themes, or by destination, trip length and budget.',
+/** Rebuilt hourly, and immediately when an admin action revalidates it. */
+export const revalidate = 3600
+
+/** The count is read from the database — packages are managed in the admin panel. */
+export async function generateMetadata() {
+  const count = (await listPackages()).length
+
+  return {
+    title: 'Travel Packages — Family, Honeymoon & Adventure Trips | Hansvahini Expeditions',
+    description: `Browse ${count} curated travel packages across India. Filter by family, honeymoon, adventure, pilgrimage, wildlife and luxury themes, or by destination, trip length and budget.`,
+  }
 }
 
 /**
@@ -28,6 +31,8 @@ export const metadata: Metadata = {
 export default async function PackagesPage(props: PageProps<'/packages'>) {
   const { category, destination } = await props.searchParams
 
+  const [packages, destinationOptions] = await Promise.all([listPackages(), packageDestinations()])
+
   const requestedCategory = Array.isArray(category) ? category[0] : category
   const requestedDestination = Array.isArray(destination) ? destination[0] : destination
 
@@ -35,7 +40,7 @@ export default async function PackagesPage(props: PageProps<'/packages'>) {
     ? (requestedCategory as PackageCategory | 'all')
     : 'all'
 
-  const initialDestination = packageDestinations.some((d) => d.slug === requestedDestination)
+  const initialDestination = destinationOptions.some((d) => d.slug === requestedDestination)
     ? (requestedDestination as string)
     : 'all'
 
@@ -47,6 +52,8 @@ export default async function PackagesPage(props: PageProps<'/packages'>) {
         {/* key remounts the explorer when the query changes so the filter state re-seeds */}
         <PackagesExplorer
           key={`${initialCategory}-${initialDestination}`}
+          packages={packages}
+          destinations={destinationOptions}
           initialCategory={initialCategory}
           initialDestination={initialDestination}
         />

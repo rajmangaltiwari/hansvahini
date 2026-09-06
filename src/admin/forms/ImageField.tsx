@@ -84,7 +84,14 @@ export default function ImageField({
         {mode === 'link' ? (
           <input
             id={id}
-            type="url"
+            /*
+             * Deliberately `text`, not `url`. A site-relative path like
+             * /images/ladakh.jpg is a perfectly good image source — it resolves
+             * against public/ — but type="url" demands a scheme and blocks form
+             * submission with "Please enter a URL".
+             */
+            type="text"
+            inputMode="url"
             value={value}
             onChange={(e) => commit(e.target.value)}
             placeholder={placeholder}

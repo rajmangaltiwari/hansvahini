@@ -4,13 +4,19 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Eye } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import CreatePackages from '@/src/admin/packages/CreatePackages'
-import { getPackageBySlug } from '@/src/data/packages'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { listPackages } from '@/src/lib/queries/packages'
+import { getPackageBySlug } from '@/src/lib/queries/packages'
 
 export const metadata: Metadata = { title: 'Edit Package' }
 
 export default async function EditPackagePage(props: PageProps<'/admin/packages/[slug]/edit'>) {
   const { slug } = await props.params
-  const pkg = getPackageBySlug(slug)
+  const [pkg, destinations, packages] = await Promise.all([
+    getPackageBySlug(slug, true),
+    listDestinations(true),
+    listPackages(true),
+  ])
   if (!pkg) notFound()
 
   return (
@@ -37,7 +43,7 @@ export default async function EditPackagePage(props: PageProps<'/admin/packages/
         }
       />
 
-      <CreatePackages initial={pkg} />
+      <CreatePackages initial={pkg} destinations={destinations} liveCount={packages.length} />
     </>
   )
 }

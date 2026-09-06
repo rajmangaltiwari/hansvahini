@@ -1,30 +1,45 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, Pencil, Search, Star, Trash2 } from 'lucide-react'
 import FeaturedBar, { FeaturedStar } from '@/src/admin/FeaturedBar'
-import OutputModal from '@/src/admin/forms/OutputModal'
-import { FEATURED_LIMIT, readPicks, savePicks } from '@/src/admin/featuredStore'
+import { FEATURED_LIMIT } from '@/src/admin/featuredStore'
+import { setFeaturedPicks } from '@/src/server/actions/featured'
+import { deletePackage } from '@/src/server/actions/packages'
+import ConfirmDialog from '@/src/admin/ui/ConfirmDialog'
 import {
-  travelPackages,
-  featuredPackageSlugs,
   packageCategories,
   formatPrice,
   type PackageCategory,
+  type TravelPackage,
 } from '@/src/data/packages'
 
-const titleFor = (slug: string) =>
-  travelPackages.find((p) => p.slug === slug)?.title ?? slug
+/** The list and the current homepage picks arrive as props — this cannot query. */
+export default function PackagesTable({
+  packages,
+  featured,
+}: {
+  packages: TravelPackage[]
+  featured: string[]
+}) {
+  const titleFor = (slug: string) => packages.find((p) => p.slug === slug)?.title ?? slug
 
-export default function PackagesTable() {
+  const router = useRouter()
   const [category, setCategory] = useState<PackageCategory | 'all'>('all')
-  const [query, setQuery]       = useState('')
+  /** Publication state is a separate axis from theme, so it gets its own tabs. */
+  const [status, setStatus] = useState<'all' | 'published' | 'draft'>('all')
+  const [query, setQuery]   = useState('')
 
-  // Seeded from what this session last chose, else from the live homepage list.
-  const [saved, setSaved] = useState<string[]>(() => readPicks('package') ?? featuredPackageSlugs)
-  const [picks, setPicks] = useState<string[]>(saved)
-  const [savedList, setSavedList] = useState<string[] | null>(null)
+  /** The row awaiting confirmation, or null when the dialog is closed. */
+  const [confirming, setConfirming] = useState<{ slug: string; label: string } | null>(null)
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  // Seeded from the picks stored in the database.
+  const [saved, setSaved] = useState<string[]>(featured)
+  const [picks, setPicks] = useState<string[]>(featured)
 
   const dirty = picks.length !== saved.length || picks.some((slug, i) => slug !== saved[i])
 
@@ -37,20 +52,49 @@ export default function PackagesTable() {
   }
 
   function handleSave() {
-    savePicks('package', picks)
-    setSaved(picks)
-    setSavedList(picks)
+    setError(null)
+    startTransition(async () => {
+      const result = await setFeaturedPicks('package', picks)
+      if (!result.ok) {
+        setError(result.error ?? 'Those picks could not be saved.')
+        return
+      }
+      setSaved(picks)
+      router.refresh()
+    })
+  }
+
+  function confirmRemove() {
+    if (!confirming) return
+    const { slug } = confirming
+
+    setError(null)
+    startTransition(async () => {
+      const result = await deletePackage(slug)
+      setConfirming(null)
+
+      if (!result.ok) {
+        setError(result.error ?? 'That package could not be deleted.')
+        return
+      }
+      router.refresh()
+    })
   }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
 
-    return travelPackages.filter((pkg) => {
+    return packages.filter((pkg) => {
       if (category !== 'all' && !pkg.categories.includes(category)) return false
+      // Records that predate drafts carry no status and count as published.
+      if (status !== 'all' && (pkg.status ?? 'published') !== status) return false
       if (!q) return true
       return `${pkg.title} ${pkg.destinationName} ${pkg.region}`.toLowerCase().includes(q)
     })
-  }, [category, query])
+  }, [packages, category, status, query])
+
+  const countFor = (id: 'all' | 'published' | 'draft') =>
+    id === 'all' ? packages.length : packages.filter((p) => (p.status ?? 'published') === id).length
 
   return (
     <>
@@ -62,6 +106,36 @@ export default function PackagesTable() {
         onSave={handleSave}
         dirty={dirty}
       />
+
+      {error && (
+        <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
+      {/* Publication state — a separate axis from the theme chips below. */}
+      <div className="flex items-center gap-1.5 mb-3">
+        {([
+          { id: 'all', label: 'All' },
+          { id: 'published', label: 'Published' },
+          { id: 'draft', label: 'Drafts' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setStatus(tab.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              status === tab.id
+                ? 'bg-gray-900 text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+            }`}
+          >
+            {tab.label}
+            <span className={status === tab.id ? 'ml-1.5 text-gray-400' : 'ml-1.5 text-gray-300'}>
+              {countFor(tab.id)}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -173,7 +247,9 @@ export default function PackagesTable() {
                         <Pencil className="w-4 h-4" />
                       </Link>
                       <button
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        onClick={() => setConfirming({ slug: pkg.slug, label: pkg.title })}
+                        disabled={pending}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-40 transition-colors"
                         aria-label={`Delete ${pkg.title}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -193,19 +269,20 @@ export default function PackagesTable() {
           </div>
         ) : (
           <div className="px-5 py-3 border-t border-gray-100">
-            <p className="text-xs text-gray-400">Showing {filtered.length} of {travelPackages.length} packages</p>
+            <p className="text-xs text-gray-400">Showing {filtered.length} of {packages.length} packages</p>
           </div>
         )}
       </div>
 
-      {savedList && (
-        <OutputModal
-          title="Homepage packages"
-          targetFile="src/data/packages.ts → featuredPackageSlugs"
-          payload={savedList}
-          onClose={() => setSavedList(null)}
-        />
-      )}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={`Delete this package?`}
+        message={`“${confirming?.label ?? ''}” will be removed permanently. This cannot be undone.`}
+        busy={pending}
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirming(null)}
+      />
     </>
   )
 }

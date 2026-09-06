@@ -1,3 +1,5 @@
+import SiteImage from '@/src/components/SiteImage'
+
 const chapters = [
   {
     year: '2016',
@@ -39,11 +41,11 @@ export default function OurStory() {
             </p>
 
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mt-8">
-              <img
+              <SiteImage
                 src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80"
                 alt="A mountain road climbing towards a Himalayan pass"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
               />
             </div>
           </div>

@@ -8,7 +8,19 @@ import AdminTopbar from './AdminTopbar'
  * Chrome for every panel route: a docked rail from `lg` up, a slide-over drawer
  * below that, and a scrolling content column. Used by app/admin/(panel)/layout.
  */
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+  badges,
+  user,
+  newLeads = 0,
+}: {
+  children: React.ReactNode
+  /** Live sidebar counts, resolved by the panel layout on the server. */
+  badges?: Record<string, number>
+  /** The signed-in admin, for the topbar chip. */
+  user?: { name: string; email: string }
+  newLeads?: number
+}) {
   // The drawer closes from AdminSidebar's onNavigate, so a route change needs no effect here.
   const [navOpen, setNavOpen] = useState(false)
 
@@ -27,7 +39,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Docked rail */}
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 z-40">
-        <AdminSidebar />
+        <AdminSidebar badges={badges} />
       </aside>
 
       {/* Drawer */}
@@ -47,12 +59,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             navOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <AdminSidebar onNavigate={() => setNavOpen(false)} />
+          <AdminSidebar onNavigate={() => setNavOpen(false)} badges={badges} />
         </aside>
       </div>
 
       <div className="flex flex-col min-h-screen">
-        <AdminTopbar onOpenNav={() => setNavOpen(true)} />
+        <AdminTopbar onOpenNav={() => setNavOpen(true)} user={user} newLeads={newLeads} />
         <main className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>

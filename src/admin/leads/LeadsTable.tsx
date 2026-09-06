@@ -1,20 +1,22 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import {
-  Calendar, Check, Mail, MapPin, MessageCircle, MessageSquarePlus, Phone, Search, Users, X,
+  AlertCircle, Calendar, Check, Loader2, Mail, MapPin, MessageCircle, MessageSquarePlus,
+  Phone, Search, Trash2, Users, X,
 } from 'lucide-react'
 import StatusBadge from '@/src/admin/ui/StatusBadge'
+import Pagination from '@/src/components/Pagination'
 import {
-  leads,
   leadStatuses,
   quickNotes,
-  formatDate,
+  formatDateTime,
   whatsappNumber,
   type Lead,
   type LeadNote,
   type LeadStatus,
 } from '@/src/admin/data/adminData'
+import { deleteLead, updateLead } from '@/src/server/actions/leads'
 
 /** A lead plus the status-change history added while the panel is open. */
 type LeadRow = Lead & { notes: LeadNote[] }
@@ -24,7 +26,7 @@ const filters: { id: LeadStatus | 'all'; label: string }[] = [
   ...leadStatuses.map((s) => ({ id: s.id, label: s.label })),
 ]
 
-/** Notes are session-only, so a wall-clock stamp is honest enough. */
+/** Only used for the optimistic note; the server sends the real timestamp back. */
 function stamp(): string {
   return new Date().toLocaleString('en-GB', {
     day: 'numeric',
@@ -34,11 +36,28 @@ function stamp(): string {
   })
 }
 
-export default function LeadsTable() {
-  // Seeded from the dummy data, then owned here so status changes stick while you work.
-  const [rows, setRows] = useState<LeadRow[]>(() => leads.map((lead) => ({ ...lead, notes: [] })))
+export default function LeadsTable({
+  initialLeads,
+  initialQuery = '',
+}: {
+  initialLeads: LeadRow[]
+  /** Seeded from ?q= so the topbar search lands on a filtered list. */
+  initialQuery?: string
+}) {
+  // Seeded from the server, then held here so the drawer stays responsive while
+  // a save is in flight. The action revalidates, so a refresh shows the truth.
+  const [rows, setRows] = useState<LeadRow[]>(initialLeads)
   const [status, setStatus] = useState<LeadStatus | 'all'>('all')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
+  /** Fifteen rows fills a laptop screen without scrolling past the filters. */
+  const PER_PAGE = 15
+  const [page, setPage] = useState(1)
+
+  const [saving, startSaving] = useTransition()
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [deleting, startDeleting] = useTransition()
+  /** Deleting is irreversible, so the button asks once before it does it. */
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [draftStatus, setDraftStatus] = useState<LeadStatus>('new')
@@ -72,10 +91,23 @@ export default function LeadsTable() {
     return rows.filter((lead) => {
       if (status !== 'all' && lead.status !== status) return false
       if (!q) return true
-      const haystack = `${lead.name} ${lead.email} ${lead.phone} ${lead.destination} ${lead.message} #${lead.id}`
+      const haystack = `${lead.name} ${lead.email} ${lead.phone} ${lead.destination} ${lead.message}`
       return haystack.toLowerCase().includes(q)
     })
   }, [rows, status, query])
+
+  // Filtering to a smaller set can strand the reader on a page that no longer
+  // exists, so any change resets to the first. Adjusted during render rather
+  // than in an effect: an effect would paint the stale page first.
+  const filterKey = `${status}|${query}`
+  const [lastFilters, setLastFilters] = useState(filterKey)
+  if (filterKey !== lastFilters) {
+    setLastFilters(filterKey)
+    setPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const visible = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   function countFor(id: LeadStatus | 'all') {
     return id === 'all' ? rows.length : rows.filter((row) => row.status === id).length
@@ -86,6 +118,35 @@ export default function LeadsTable() {
     setSelectedId(lead.id)
     setDraftStatus(lead.status)
     setDraftNote('')
+    setConfirmDelete(false)
+    setSaveError(null)
+  }
+
+  function removeLead() {
+    if (!selected || deleting) return
+
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+
+    const lead = selected
+    const previous = rows
+
+    startDeleting(async () => {
+      // Closed and removed up front so the drawer does not sit on a row that
+      // is about to vanish; restored in full if the server refuses.
+      setSelectedId(null)
+      setRows((prev) => prev.filter((row) => row.id !== lead.id))
+
+      const result = await deleteLead(lead.id)
+      if (!result.ok) {
+        setRows(previous)
+        setSelectedId(lead.id)
+        setSaveError(result.error ?? 'That enquiry could not be deleted.')
+      }
+      setConfirmDelete(false)
+    })
   }
 
   const noteText = draftNote.trim()
@@ -93,24 +154,39 @@ export default function LeadsTable() {
   const canSave = Boolean(selected) && (statusChanged || noteText.length > 0)
 
   function saveUpdate() {
-    if (!selected || !canSave) return
+    if (!selected || !canSave || saving) return
 
-    const note: LeadNote = {
-      id: Date.now(),
-      status: draftStatus,
-      text: noteText,
-      at: stamp(),
-      by: 'Raj Mangal',
-    }
+    const lead = selected
+    const previous = rows
+    const optimistic: LeadNote | null = noteText
+      ? { id: Date.now(), status: draftStatus, text: noteText, at: stamp(), by: 'Saving…' }
+      : null
 
+    setSaveError(null)
     setRows((prev) =>
       prev.map((row) =>
-        row.id === selected.id
-          ? { ...row, status: draftStatus, notes: [note, ...row.notes] }
+        row.id === lead.id
+          ? {
+              ...row,
+              status: draftStatus,
+              notes: optimistic ? [optimistic, ...row.notes] : row.notes,
+            }
           : row
       )
     )
     setDraftNote('')
+
+    startSaving(async () => {
+      const result = await updateLead(lead.id, draftStatus, noteText)
+
+      if (!result.ok) {
+        // Put the drawer back the way it was rather than leaving a note on
+        // screen that never reached the database.
+        setRows(previous)
+        setDraftNote(noteText)
+        setSaveError(result.error ?? 'That did not save.')
+      }
+    })
   }
 
   return (
@@ -164,11 +240,11 @@ export default function LeadsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((lead) => (
+              {visible.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3.5">
                     <p className="font-medium text-gray-900">{lead.name}</p>
-                    <p className="text-xs text-gray-400">#{lead.id} · {lead.email}</p>
+                    <p className="text-xs text-gray-400">{lead.email}</p>
                   </td>
                   <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap">{lead.destination}</td>
                   <td className="px-5 py-3.5 text-gray-600 whitespace-nowrap hidden lg:table-cell">
@@ -184,7 +260,7 @@ export default function LeadsTable() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-gray-400 text-xs whitespace-nowrap hidden sm:table-cell">
-                    {formatDate(lead.createdAt)}
+                    {formatDateTime(lead.createdAt)}
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
@@ -208,13 +284,12 @@ export default function LeadsTable() {
         )}
 
         {filtered.length > 0 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-            <p className="text-xs text-gray-400">Showing {filtered.length} of {rows.length} enquiries</p>
-            <div className="flex items-center gap-1">
-              <button disabled className="px-2.5 py-1 text-xs font-medium text-gray-300 rounded-md">Previous</button>
-              <span className="px-2.5 py-1 text-xs font-semibold text-white bg-gray-900 rounded-md">1</span>
-              <button disabled className="px-2.5 py-1 text-xs font-medium text-gray-300 rounded-md">Next</button>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t border-gray-100">
+            <p className="text-xs text-gray-400">
+              Showing {(page - 1) * PER_PAGE + 1}–{(page - 1) * PER_PAGE + visible.length} of{' '}
+              {filtered.length} enquiries
+            </p>
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
           </div>
         )}
       </div>
@@ -235,7 +310,7 @@ export default function LeadsTable() {
           >
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 flex-shrink-0">
               <div>
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Enquiry #{selected.id}</p>
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Enquiry</p>
                 <h3 className="text-lg font-bold text-gray-900 tracking-tight">{selected.name}</h3>
               </div>
               <button
@@ -250,7 +325,7 @@ export default function LeadsTable() {
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
               <div className="flex items-center gap-2">
                 <StatusBadge status={selected.status} />
-                <span className="text-xs text-gray-400">via {selected.source} · {formatDate(selected.createdAt)}</span>
+                <span className="text-xs text-gray-400">via {selected.source} · {formatDateTime(selected.createdAt)}</span>
               </div>
 
               <dl className="space-y-3">
@@ -324,14 +399,23 @@ export default function LeadsTable() {
 
                 <button
                   onClick={saveUpdate}
-                  disabled={!canSave}
+                  disabled={!canSave || saving}
                   className="mt-2 w-full flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Check className="w-4 h-4" />
-                  {statusChanged
-                    ? `Save as ${leadStatuses.find((s) => s.id === draftStatus)!.label}`
-                    : 'Save note'}
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {saving
+                    ? 'Saving…'
+                    : statusChanged
+                      ? `Save as ${leadStatuses.find((s) => s.id === draftStatus)!.label}`
+                      : 'Save note'}
                 </button>
+
+                {saveError && (
+                  <p className="mt-2 flex items-start gap-1.5 text-[11px] text-red-600">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+                    {saveError}
+                  </p>
+                )}
               </div>
 
               {/* History */}
@@ -357,6 +441,40 @@ export default function LeadsTable() {
                     ))}
                   </ol>
                 )}
+              </div>
+
+              {/* Deleting sits at the very bottom, apart from the save controls,
+                  so it is never the button you reach for by mistake. */}
+              <div className="border-t border-gray-100 pt-4">
+                <button
+                  onClick={removeLead}
+                  disabled={deleting}
+                  className={`w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border transition-colors disabled:opacity-50 ${
+                    confirmDelete
+                      ? 'bg-red-600 border-red-600 text-white hover:bg-red-700'
+                      : 'bg-white border-gray-200 text-red-600 hover:border-red-300 hover:bg-red-50'
+                  }`}
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {deleting
+                    ? 'Deleting…'
+                    : confirmDelete
+                      ? 'Tap again to delete permanently'
+                      : 'Delete enquiry'}
+                </button>
+
+                {confirmDelete && !deleting && (
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="mt-2 w-full text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+
+                <p className="mt-2 text-[11px] text-gray-400 text-center">
+                  This removes the enquiry and its history for good.
+                </p>
               </div>
             </div>
 

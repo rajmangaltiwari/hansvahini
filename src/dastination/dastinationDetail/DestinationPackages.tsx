@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import type { Destination } from '@/src/data/destinations'
-import { packagesForDestination } from '@/src/data/packages'
+import { packagesForDestination } from '@/src/lib/queries/packages'
 import PackageCard from '@/src/packages/PackageCard'
 
 /** The bookable trips running to this place — this is where pricing lives. */
-export default function DestinationPackages({ dest }: { dest: Destination }) {
-  const packages = packagesForDestination(dest.slug)
+export default async function DestinationPackages({ dest }: { dest: Destination }) {
+  const packages = await packagesForDestination(dest.slug)
 
   return (
     <section id="packages" className="py-20 bg-white scroll-mt-16">

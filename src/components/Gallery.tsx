@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Lightbox from './Lightbox'
 import type { GalleryImage } from '@/src/data/destinations'
+import SiteImage from '@/src/components/SiteImage'
 
 /**
  * Bento photo grid shared by the destination and package detail pages.
@@ -31,11 +32,11 @@ export default function Gallery({ images }: { images: GalleryImage[] }) {
             }`}
             aria-label={`View photo: ${image.caption}`}
           >
-            <img
+            <SiteImage
               src={image.url}
               alt={image.caption}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/45 transition-colors duration-300" />
             <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">

@@ -1,15 +1,19 @@
 import Link from 'next/link'
 import { MapPin, Compass, Star, Users } from 'lucide-react'
-import { destinations } from '@/src/data/destinations'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { listPackages } from '@/src/lib/queries/packages'
 
-const stats = [
-  { icon: MapPin,  value: `${destinations.length}`, label: 'Destinations' },
-  { icon: Compass, value: '30+',                        label: 'Curated Trips' },
-  { icon: Users,   value: '12,000+',                    label: 'Travellers Hosted' },
-  { icon: Star,    value: '4.8/5',                      label: 'Average Rating' },
-]
+export default async function DestinationsHero() {
+  // Counts come from the database now, so they follow what the admin publishes.
+  const [destinations, packages] = await Promise.all([listDestinations(), listPackages()])
 
-export default function DestinationsHero() {
+  const stats = [
+    { icon: MapPin,  value: `${destinations.length}`, label: 'Destinations' },
+    { icon: Compass, value: `${packages.length}`,     label: 'Curated Trips' },
+    { icon: Users,   value: '12,000+',                label: 'Travellers Hosted' },
+    { icon: Star,    value: '4.8/5',                  label: 'Average Rating' },
+  ]
+
   return (
     <section className="relative h-[60vh] min-h-96 flex items-end overflow-hidden">
       <div

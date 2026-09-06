@@ -6,15 +6,14 @@ import {
   Binoculars, Palmtree, CalendarClock, Gem, Backpack, UsersRound,
 } from 'lucide-react'
 import PackageCard from './PackageCard'
+import Pagination from '@/src/components/Pagination'
 import {
-  travelPackages,
   packageCategories,
-  packageDestinations,
   durationOptions,
   budgetOptions,
   sortOptions,
-  countByCategory,
   type PackageCategory,
+  type TravelPackage,
   type DurationId,
   type BudgetId,
   type SortId,
@@ -35,13 +34,31 @@ const icons = {
   usersround: UsersRound,
 } as const
 
+/**
+ * Filtering and sorting stay on the client, but the packages themselves now
+ * arrive as props — a Client Component cannot query the database.
+ *
+ * `destinations` is the filter's option list, derived server-side from the
+ * packages that actually run somewhere.
+ */
 export default function PackagesExplorer({
+  packages,
+  destinations,
   initialCategory = 'all',
   initialDestination = 'all',
 }: {
+  packages: TravelPackage[]
+  destinations: { slug: string; name: string }[]
   initialCategory?: PackageCategory | 'all'
   initialDestination?: string
 }) {
+  /** Nine fills three rows of the three-column grid exactly. */
+  const PER_PAGE = 9
+  const [page, setPage] = useState(1)
+
+  const countFor = (id: PackageCategory | 'all') =>
+    id === 'all' ? packages.length : packages.filter((p) => p.categories.includes(id)).length
+
   const [category, setCategory]       = useState<PackageCategory | 'all'>(initialCategory)
   const [destination, setDestination] = useState<string>(initialDestination)
   const [duration, setDuration]       = useState<DurationId>('all')
@@ -57,7 +74,7 @@ export default function PackagesExplorer({
     const budgetRange   = budgetOptions.find((b) => b.id === budget)!
     const q = query.trim().toLowerCase()
 
-    const list = travelPackages.filter((p) => {
+    const list = packages.filter((p) => {
       if (category !== 'all' && !p.categories.includes(category)) return false
       if (destination !== 'all' && p.destinationSlug !== destination) return false
       if (p.durationDays < durationRange.min || p.durationDays > durationRange.max) return false
@@ -87,7 +104,20 @@ export default function PackagesExplorer({
         sorted.sort((a, b) => b.reviews - a.reviews)
     }
     return sorted
-  }, [category, destination, duration, budget, sort, query])
+  }, [packages, category, destination, duration, budget, sort, query])
+
+  // Any filter change invalidates the current page — page 4 of a 2-page result
+  // would render empty. Adjusted during render rather than in an effect: an
+  // effect would paint the stale page first.
+  const filterKey = `${category}|${destination}|${duration}|${budget}|${sort}|${query}`
+  const [lastFilters, setLastFilters] = useState(filterKey)
+  if (filterKey !== lastFilters) {
+    setLastFilters(filterKey)
+    setPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const visible = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   const activeCount =
     (category !== 'all' ? 1 : 0) +
@@ -135,7 +165,7 @@ export default function PackagesExplorer({
                 <Icon className="w-4 h-4" />
                 {cat.label}
                 <span className={isActive ? 'text-gray-400' : 'text-gray-400'}>
-                  {countByCategory(cat.id)}
+                  {countFor(cat.id)}
                 </span>
               </button>
             )
@@ -208,7 +238,7 @@ export default function PackagesExplorer({
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-gray-900 transition-colors"
             >
               <option value="all">All Destinations</option>
-              {packageDestinations.map((d) => (
+              {destinations.map((d) => (
                 <option key={d.slug} value={d.slug}>{d.name}</option>
               ))}
             </select>
@@ -248,8 +278,11 @@ export default function PackagesExplorer({
         {/* ── Result count + reset ── */}
         <div className="flex items-center justify-between border-t border-gray-100 pt-5 mb-8">
           <p className="text-sm text-gray-500">
-            Showing <span className="font-semibold text-gray-900">{filtered.length}</span> of{' '}
-            {travelPackages.length} packages
+            Showing{' '}
+            <span className="font-semibold text-gray-900">
+              {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}–{(page - 1) * PER_PAGE + visible.length}
+            </span>{' '}
+            of {filtered.length} packages
           </p>
           {activeCount > 0 && (
             <button
@@ -264,11 +297,15 @@ export default function PackagesExplorer({
 
         {/* ── Grid ── */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((pkg) => (
-              <PackageCard key={pkg.id} pkg={pkg} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {visible.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} />
+              ))}
+            </div>
+
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} className="mt-10" />
+          </>
         ) : (
           <div className="text-center py-20 border border-dashed border-gray-200 rounded-2xl">
             <p className="text-4xl mb-4">🎒</p>

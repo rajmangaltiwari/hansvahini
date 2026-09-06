@@ -1,9 +1,9 @@
 import type { Destination } from '@/src/data/destinations'
-import { packagesForDestination } from '@/src/data/packages'
+import { packagesForDestination } from '@/src/lib/queries/packages'
 
 /** Sticky sidebar rail that sits beside the Overview section. */
-export default function QuickFacts({ dest }: { dest: Destination }) {
-  const packageCount = packagesForDestination(dest.slug).length
+export default async function QuickFacts({ dest }: { dest: Destination }) {
+  const packageCount = (await packagesForDestination(dest.slug)).length
 
   const facts = [
     { label: 'Region',           value: dest.region },

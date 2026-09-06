@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import PackageCard from '@/src/packages/PackageCard'
-import { homepagePackages, travelPackages } from '@/src/data/packages'
+import { homepagePackages, listPackages } from '@/src/lib/queries/packages'
 
-// Same card as the full /packages page, in its compact form. Which six show up
-// is curated from /admin/packages; the copy is trimmed so the rows stay level.
-const featured = homepagePackages(6)
+export default async function Packages() {
+  // Same card as the full /packages page, in its compact form. Which six show
+  // up is curated from /admin/packages; the copy is trimmed so rows stay level.
+  const [featured, all] = await Promise.all([homepagePackages(6), listPackages()])
 
-export default function Packages() {
   return (
     <section id="packages" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,7 +34,7 @@ export default function Packages() {
             href="/packages"
             className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold px-8 py-3 rounded-full hover:bg-gray-700 transition-colors"
           >
-            View All {travelPackages.length} Packages
+            View All {all.length} Packages
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

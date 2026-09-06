@@ -1,8 +1,13 @@
 import Link from 'next/link'
-import { formatPrice, fromPrice } from '@/src/data/packages'
-import { destinations } from '@/src/data/destinations'
+import { formatPrice } from '@/src/data/packages'
+import { fromPriceMap } from '@/src/lib/queries/packages'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import SiteImage from '@/src/components/SiteImage'
 
-export default function DestinationComparison() {
+export default async function DestinationComparison() {
+  // One pass for every row's "from" price, rather than a lookup per row.
+  const [destinations, prices] = await Promise.all([listDestinations(), fromPriceMap()])
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -41,9 +46,11 @@ export default function DestinationComparison() {
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <img
+                      <SiteImage
                         src={dest.image}
                         alt=""
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                       />
                       <div>
@@ -63,7 +70,7 @@ export default function DestinationComparison() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">
-                    {formatPrice(fromPrice(dest.slug))}
+                    {formatPrice(prices[dest.slug] ?? 0)}
                   </td>
                   <td className="px-5 py-4 whitespace-nowrap">
                     <Link

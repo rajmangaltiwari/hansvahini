@@ -3,10 +3,13 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import CreateDestination from '@/src/admin/destinations/CreateDestination'
+import { listDestinations } from '@/src/lib/queries/destinations'
 
 export const metadata: Metadata = { title: 'New Destination' }
 
-export default function NewDestinationPage() {
+export default async function NewDestinationPage() {
+  const liveCount = (await listDestinations(true)).length
+
   return (
     <>
       <Link
@@ -22,7 +25,7 @@ export default function NewDestinationPage() {
         subtitle="Every field on the Destination record — place guide, seasons, gallery and listing metadata."
       />
 
-      <CreateDestination />
+      <CreateDestination liveCount={liveCount} />
     </>
   )
 }

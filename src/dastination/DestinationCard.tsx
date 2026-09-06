@@ -1,20 +1,28 @@
 import Link from 'next/link'
 import { Package, Star, MountainSnow, CalendarDays } from 'lucide-react'
 import type { Destination } from '@/src/data/destinations'
-import { formatPrice, fromPrice } from '@/src/data/packages'
+import { formatPrice } from '@/src/data/packages'
+import SiteImage from '@/src/components/SiteImage'
 
-export default function DestinationCard({ dest }: { dest: Destination }) {
-  // Destinations carry no price of their own — this is the cheapest trip there.
-  const from = fromPrice(dest.slug)
+/**
+ * The "from" price is passed in rather than looked up here.
+ *
+ * This card is rendered from DestinationExplorer, which is a Client Component —
+ * so the card cannot be async and cannot query. Its server parents resolve the
+ * price and hand it down. `fromPrice()` in src/lib/queries/packages.ts is what
+ * they call.
+ */
+export default function DestinationCard({ dest, from }: { dest: Destination; from: number }) {
 
   return (
     <article className="group bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
       <Link href={`/destination/${dest.slug}`} className="block">
         <div className="relative h-52 overflow-hidden">
-          <img
+          <SiteImage
             src={dest.image}
             alt={dest.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
           {/* Badges */}

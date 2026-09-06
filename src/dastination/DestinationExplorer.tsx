@@ -1,22 +1,43 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import DestinationCard from './DestinationCard'
+import Pagination from '@/src/components/Pagination'
 import {
-  destinations,
   regions,
   experiences,
   difficulties,
   destinationSortOptions,
-  countByRegion,
+  type Destination,
   type Region,
   type Experience,
   type DestinationSortId,
 } from '@/src/data/destinations'
-import { fromPrice } from '@/src/data/packages'
 
-export default function DestinationExplorer() {
+/**
+ * Filtering and sorting stay on the client — they are instant and need no round
+ * trip — but the data itself now comes from the server page as props, because a
+ * Client Component cannot query the database.
+ *
+ * `prices` maps a destination slug to its cheapest trip. It is passed in rather
+ * than derived here for the same reason: working it out means reading the whole
+ * packages table.
+ */
+export default function DestinationExplorer({
+  destinations,
+  prices,
+}: {
+  destinations: Destination[]
+  prices: Record<string, number>
+}) {
+  // Stable across renders so the filter memo below is not invalidated every time.
+  const priceOf = useCallback((slug: string) => prices[slug] ?? 0, [prices])
+
+  /** Nine fills three rows of the three-column grid exactly. */
+  const PER_PAGE = 9
+  const [page, setPage] = useState(1)
+
   const [query, setQuery]           = useState('')
   const [region, setRegion]         = useState<Region | 'All'>('All')
   const [experience, setExperience] = useState<Experience | 'All'>('All')
@@ -44,10 +65,10 @@ export default function DestinationExplorer() {
         sorted.sort((a, b) => b.rating - a.rating)
         break
       case 'price-low':
-        sorted.sort((a, b) => fromPrice(a.slug) - fromPrice(b.slug))
+        sorted.sort((a, b) => priceOf(a.slug) - priceOf(b.slug))
         break
       case 'price-high':
-        sorted.sort((a, b) => fromPrice(b.slug) - fromPrice(a.slug))
+        sorted.sort((a, b) => priceOf(b.slug) - priceOf(a.slug))
         break
       case 'name':
         sorted.sort((a, b) => a.name.localeCompare(b.name))
@@ -56,7 +77,20 @@ export default function DestinationExplorer() {
         sorted.sort((a, b) => b.reviews - a.reviews)
     }
     return sorted
-  }, [query, region, experience, difficulty, sort])
+  }, [destinations, priceOf, query, region, experience, difficulty, sort])
+
+  // Any filter change invalidates the current page — page 3 of a 1-page result
+  // would render empty. Adjusted during render rather than in an effect: an
+  // effect would paint the stale page first.
+  const filterKey = `${query}|${region}|${experience}|${difficulty}|${sort}`
+  const [lastFilters, setLastFilters] = useState(filterKey)
+  if (filterKey !== lastFilters) {
+    setLastFilters(filterKey)
+    setPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const visible = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
 
   const activeCount =
     (region !== 'All' ? 1 : 0) +
@@ -145,7 +179,7 @@ export default function DestinationExplorer() {
               >
                 {r === 'All' ? 'All Regions' : r}
                 <span className={region === r ? 'text-gray-400 ml-1.5' : 'text-gray-400 ml-1.5'}>
-                  {countByRegion(r)}
+                  {r === 'All' ? destinations.length : destinations.filter((d) => d.region === r).length}
                 </span>
               </button>
             ))}
@@ -190,8 +224,11 @@ export default function DestinationExplorer() {
         {/* ── Result count + reset ── */}
         <div className="flex items-center justify-between border-t border-gray-100 pt-5 mb-8">
           <p className="text-sm text-gray-500">
-            Showing <span className="font-semibold text-gray-900">{filtered.length}</span> of{' '}
-            {destinations.length} destinations
+            Showing{' '}
+            <span className="font-semibold text-gray-900">
+              {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1}–{(page - 1) * PER_PAGE + visible.length}
+            </span>{' '}
+            of {filtered.length} destinations
           </p>
           {activeCount > 0 && (
             <button
@@ -206,11 +243,15 @@ export default function DestinationExplorer() {
 
         {/* ── Grid ── */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((dest) => (
-              <DestinationCard key={dest.slug} dest={dest} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {visible.map((dest) => (
+                <DestinationCard key={dest.slug} dest={dest} from={priceOf(dest.slug)} />
+              ))}
+            </div>
+
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} className="mt-10" />
+          </>
         ) : (
           <div className="text-center py-20 border border-dashed border-gray-200 rounded-2xl">
             <p className="text-4xl mb-4">🧭</p>

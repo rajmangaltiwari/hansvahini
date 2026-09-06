@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Heart, Users, Mountain, Landmark } from 'lucide-react'
-import { travelPackages, countByCategory, type PackageCategory } from '@/src/data/packages'
+import { type PackageCategory } from '@/src/data/packages'
+import { listPackages } from '@/src/lib/queries/packages'
 
 const quickLinks: { id: PackageCategory; label: string; icon: typeof Users }[] = [
   { id: 'family',     label: 'Family',     icon: Users    },
@@ -9,8 +10,12 @@ const quickLinks: { id: PackageCategory; label: string; icon: typeof Users }[] =
   { id: 'pilgrimage', label: 'Pilgrimage', icon: Landmark },
 ]
 
-export default function PackagesHero() {
-  const lowest = Math.min(...travelPackages.map((p) => p.price))
+export default async function PackagesHero() {
+  const packages = await listPackages()
+  // Math.min() of nothing is Infinity — an empty catalogue must not print that.
+  const lowest = packages.length ? Math.min(...packages.map((p) => p.price)) : 0
+  const countFor = (id: PackageCategory | 'all') =>
+    id === 'all' ? packages.length : packages.filter((p) => p.categories.includes(id)).length
 
   return (
     <section className="relative h-[60vh] min-h-96 flex items-end overflow-hidden">
@@ -32,7 +37,7 @@ export default function PackagesHero() {
         </nav>
 
         <p className="text-xs uppercase tracking-widest text-gray-300 mb-2">
-          {travelPackages.length} Curated Trips
+          {packages.length} Curated Trips
         </p>
         <h1 className="text-3xl sm:text-5xl font-bold text-white max-w-3xl leading-tight">
           Find the Package That Fits Your Trip
@@ -53,7 +58,7 @@ export default function PackagesHero() {
             >
               <link.icon className="w-4 h-4" />
               {link.label}
-              <span className="text-gray-300 text-xs">{countByCategory(link.id)}</span>
+              <span className="text-gray-300 text-xs">{countFor(link.id)}</span>
             </Link>
           ))}
         </div>

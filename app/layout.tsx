@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import PopUpEnquiryForm from '@/src/components/PopUpEnquiryForm'
+import { listDestinations } from '@/src/lib/queries/destinations'
 
 const geist = Geist({
   variable: '--font-geist-sans',
@@ -14,13 +15,16 @@ export const metadata: Metadata = {
     'Handcrafted travel packages to Ladakh, Manali, Spiti Valley, Kedarnath, and more. Plan your perfect Indian expedition with Hansvahini Expeditions.',
 }
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default async function RootLayout({ children }: LayoutProps<'/'>) {
+  // Only the names — the pop-up's destination select is all it needs them for.
+  const destinationNames = (await listDestinations()).map((d) => d.name)
+
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         {children}
         {/* Timed enquiry pop-up — appears 10s after arrival, once per page load */}
-        <PopUpEnquiryForm />
+        <PopUpEnquiryForm destinations={destinationNames} />
       </body>
     </html>
   )

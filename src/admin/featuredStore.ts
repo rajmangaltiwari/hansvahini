@@ -1,44 +1,9 @@
 /**
- * Homepage picks live in sessionStorage until there is a backend to hold them,
- * mirroring src/admin/draftStore.ts. The list pages read from here first so a
- * selection survives navigating away and back within the session.
+ * The homepage strip holds exactly six cards.
  *
- * When the API lands, swap these three functions for GET/PUT calls; the screens
- * above them do not have to change.
+ * This file used to hold the picks in sessionStorage. They now live in the
+ * `featured_picks` table — read by src/lib/queries/featured.ts and written by
+ * setFeaturedPicks() — so a selection survives a refresh and is what the public
+ * homepage actually renders. Only the limit is still shared from here.
  */
-
-export type FeaturedKind = 'package' | 'destination'
-
-/** The homepage strip holds exactly six cards. */
 export const FEATURED_LIMIT = 6
-
-const key = (kind: FeaturedKind) => `hansvahini:admin:featured:${kind}`
-
-/** Storage can throw outright in private windows, so every access is guarded. */
-export function readPicks(kind: FeaturedKind): string[] | null {
-  try {
-    const raw = sessionStorage.getItem(key(kind))
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : null
-  } catch {
-    return null
-  }
-}
-
-export function savePicks(kind: FeaturedKind, slugs: string[]): boolean {
-  try {
-    sessionStorage.setItem(key(kind), JSON.stringify(slugs))
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function clearPicks(kind: FeaturedKind): void {
-  try {
-    sessionStorage.removeItem(key(kind))
-  } catch {
-    // Nothing to clean up if storage is unavailable.
-  }
-}

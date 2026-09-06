@@ -1,50 +1,80 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
-  Check, CheckCircle2, FolderInput, ImagePlus, Pencil, Search, Trash2, TriangleAlert, Upload, X,
+  AlertCircle, Check, CheckCircle2, FolderInput, ImagePlus, Link2, Loader2, Pencil, Search,
+  Trash2, TriangleAlert, Upload, X,
 } from 'lucide-react'
-import { mediaImages, formatDate, type MediaImage } from '@/src/admin/data/adminData'
-import { destinations } from '@/src/data/destinations'
-
-/** Album ids are destination slugs, plus a catch-all for brand assets. */
-const albumOptions = [
-  ...destinations.map((d) => ({ id: d.slug, label: d.name })),
-  { id: 'general', label: 'General' },
-]
-
-const filterAlbums = [{ id: 'all', label: 'All photos' }, ...albumOptions]
-
-function albumLabel(id: string) {
-  return albumOptions.find((a) => a.id === id)?.label ?? id
-}
+import { formatDate } from '@/src/admin/data/adminData'
+import type { GalleryPhoto } from '@/src/lib/queries/gallery'
+import type { Destination } from '@/src/data/destinations'
+import { MAX_DIMENSION, MAX_UPLOAD_MB, uploadImageDetailed } from '@/src/admin/imageUpload'
+import { addPhotos, deletePhotos, updatePhoto } from '@/src/server/actions/gallery'
+import ConfirmDialog from '@/src/admin/ui/ConfirmDialog'
 
 const labelClass = 'block text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1'
 
-/** A file chosen in the form but not yet saved into the library. */
+/** A file chosen in the form but not yet uploaded. */
 type PendingFile = {
-  id: number
-  url: string
+  id: string
+  file: File
+  previewUrl: string
   fileName: string
   size: string
 }
 
-export default function GalleryManager() {
-  /** Seeded from the dummy library, then owned here so photos can be captioned and re-filed. */
-  const [library, setLibrary] = useState<MediaImage[]>(mediaImages)
+/** Bytes as the library displays them. */
+const formatSize = (bytes?: number) =>
+  bytes ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : '—'
+
+export default function GalleryManager({
+  destinations,
+  initialLibrary,
+}: {
+  destinations: Destination[]
+  initialLibrary: GalleryPhoto[]
+}) {
+  /** Album ids are destination slugs, plus a catch-all for brand assets. */
+  const albumOptions = useMemo(
+    () => [
+      ...destinations.map((d) => ({ id: d.slug, label: d.name })),
+      { id: 'general', label: 'General' },
+    ],
+    [destinations]
+  )
+  const filterAlbums = [{ id: 'all', label: 'All photos' }, ...albumOptions]
+  // Memoised so the filter below is not invalidated on every render.
+  const albumLabel = useCallback(
+    (id: string) => albumOptions.find((a) => a.id === id)?.label ?? id,
+    [albumOptions]
+  )
+
+  const router = useRouter()
+
+  /** Seeded from the database, then kept in step as photos are added and edited. */
+  const [library, setLibrary] = useState<GalleryPhoto[]>(initialLibrary)
   const [album, setAlbum] = useState('all')
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState<number[]>([])
+  const [selected, setSelected] = useState<string[]>([])
   const [dragging, setDragging] = useState(false)
   const [saved, setSaved] = useState(0)
 
-  // Upload form. Chosen files wait in `pending` until Save commits them to the library.
+  const [busy, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<string[] | null>(null)
+
+  // Upload form. Chosen files wait in `pending` until Save uploads them.
   const [pending, setPending] = useState<PendingFile[]>([])
   const [uploadCaption, setUploadCaption] = useState('')
-  const [uploadAlbum, setUploadAlbum] = useState(destinations[0].slug)
+  const [uploadAlbum, setUploadAlbum] = useState(destinations[0]?.slug ?? 'general')
+
+  /** A photo can also be added by pasting a URL — no file, no bucket object. */
+  const [linkUrl, setLinkUrl] = useState('')
+  const [mode, setMode] = useState<'upload' | 'link'>('upload')
 
   // Card editing — one card at a time, and only once you ask for it.
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [draftCaption, setDraftCaption] = useState('')
   const [draftAlbum, setDraftAlbum] = useState('')
 
@@ -65,98 +95,215 @@ export default function GalleryManager() {
       if (!q) return true
       return `${image.caption} ${image.fileName ?? ''} ${albumLabel(image.album)}`.toLowerCase().includes(q)
     })
-  }, [library, album, query])
+  }, [library, album, query, albumLabel])
 
   // A photo with no caption still publishes — it just publishes blank. Worth flagging.
   const uncaptioned = library.filter((image) => !image.caption.trim()).length
 
-  /** Choosing files only stages them — nothing reaches the library until Save. */
+  /** Choosing files only stages them — nothing is uploaded until Save. */
   function addFiles(files: FileList | null) {
     if (!files || files.length === 0) return
 
     const images = Array.from(files).filter((file) => file.type.startsWith('image/'))
     if (images.length === 0) return
 
-    const picked = images.map((file, i) => {
-      const url = URL.createObjectURL(file)
-      objectUrls.current.push(url)
+    const tooBig = images.filter((f) => f.size > MAX_UPLOAD_MB * 1024 * 1024)
+    if (tooBig.length > 0) {
+      setError(`${tooBig.length} file${tooBig.length === 1 ? '' : 's'} over ${MAX_UPLOAD_MB} MB were skipped.`)
+    }
 
-      return {
-        id: Date.now() + i,
-        url,
-        fileName: file.name,
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      }
-    })
+    const picked = images
+      .filter((f) => f.size <= MAX_UPLOAD_MB * 1024 * 1024)
+      .map((file) => {
+        // A local preview so the staged strip shows the photo before upload.
+        const previewUrl = URL.createObjectURL(file)
+        objectUrls.current.push(previewUrl)
+
+        return {
+          id: crypto.randomUUID(),
+          file,
+          previewUrl,
+          fileName: file.name,
+          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+        }
+      })
 
     setPending((prev) => [...prev, ...picked])
     setSaved(0)
   }
 
-  function dropPending(id: number) {
+  function dropPending(id: string) {
     setPending((prev) => {
       const target = prev.find((file) => file.id === id)
-      if (target) URL.revokeObjectURL(target.url)
+      if (target) URL.revokeObjectURL(target.previewUrl)
       return prev.filter((file) => file.id !== id)
     })
   }
 
   function clearPending() {
-    pending.forEach((file) => URL.revokeObjectURL(file.url))
+    pending.forEach((file) => URL.revokeObjectURL(file.previewUrl))
     setPending([])
   }
 
-  /** Commits the staged files into the library under the chosen caption and destination. */
+  /**
+   * Uploads the staged files to Supabase Storage, then records them.
+   *
+   * The files go straight from the browser to the bucket, into a folder named
+   * for the destination chosen above — so the objects are grouped the same way
+   * the library is.
+   */
   function savePending() {
-    if (pending.length === 0) return
+    if (pending.length === 0 || busy) return
 
     const caption = uploadCaption.trim()
+    const batch = pending
+    setError(null)
 
-    const added: MediaImage[] = pending.map((file, i) => ({
-      id: file.id,
-      url: file.url,
-      // One caption across a multi-file batch would read as duplicates, so number them.
-      caption: caption && pending.length > 1 ? `${caption} ${i + 1}` : caption,
-      album: uploadAlbum,
-      size: file.size,
-      dimensions: 'Pending',
-      uploadedAt: new Date().toISOString().slice(0, 10),
-      fileName: file.fileName,
-    }))
+    startTransition(async () => {
+      try {
+        const uploaded = await Promise.all(
+          batch.map(async (item, i) => {
+            const result = await uploadImageDetailed(item.file, uploadAlbum)
+            return {
+              url: result.url,
+              // One caption across a batch would read as duplicates, so number them.
+              caption: caption && batch.length > 1 ? `${caption} ${i + 1}` : caption,
+              fileName: item.fileName,
+              sizeBytes: result.sizeBytes,
+              width: result.width,
+              height: result.height,
+            }
+          })
+        )
 
-    setLibrary((prev) => [...added, ...prev])
-    setPending([])
-    setUploadCaption('')
-    setSaved(added.length)
+        const saveResult = await addPhotos(uploadAlbum, uploaded)
+        if (!saveResult.ok) {
+          setError(saveResult.error ?? 'Those photos could not be saved.')
+          return
+        }
+
+        clearPending()
+        setUploadCaption('')
+        setSaved(uploaded.length)
+        router.refresh()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'That upload failed.')
+      }
+    })
   }
 
-  function startEditing(image: MediaImage) {
+  /** Adds a photo hosted somewhere else. Nothing is uploaded; we store the address. */
+  function saveLink() {
+    const url = linkUrl.trim()
+    if (!url || busy) return
+
+    setError(null)
+    startTransition(async () => {
+      const result = await addPhotos(uploadAlbum, [
+        {
+          url,
+          caption: uploadCaption.trim(),
+          fileName: url.split('/').pop() || undefined,
+        },
+      ])
+
+      if (!result.ok) {
+        setError(result.error ?? 'That link could not be saved.')
+        return
+      }
+
+      setLinkUrl('')
+      setUploadCaption('')
+      setSaved(1)
+      router.refresh()
+    })
+  }
+
+  function startEditing(image: GalleryPhoto) {
     setEditingId(image.id)
     setDraftCaption(image.caption)
     setDraftAlbum(image.album)
   }
 
   function saveEdit() {
-    if (editingId === null) return
-    setLibrary((prev) =>
-      prev.map((image) =>
-        image.id === editingId ? { ...image, caption: draftCaption.trim(), album: draftAlbum } : image
-      )
-    )
+    if (editingId === null || busy) return
+
+    const id = editingId
+    const caption = draftCaption.trim()
+    const target = draftAlbum
+    const previous = library
+
+    setError(null)
+    setLibrary((prev) => prev.map((i) => (i.id === id ? { ...i, caption, album: target } : i)))
     setEditingId(null)
+
+    startTransition(async () => {
+      const result = await updatePhoto(id, caption, target)
+      if (!result.ok) {
+        setLibrary(previous)
+        setError(result.error ?? 'That change could not be saved.')
+      }
+    })
   }
 
-  /** Bulk re-file, used by the selection bar. */
-  function moveTo(ids: number[], target: string) {
-    setLibrary((prev) => prev.map((image) => (ids.includes(image.id) ? { ...image, album: target } : image)))
+  /**
+   * Bulk re-file, used by the selection bar.
+   *
+   * Applied one at a time, newest index first: a destination's photos are array
+   * entries, so moving one shifts the positions of those after it. Doing them in
+   * one batch would make every id after the first stale.
+   */
+  function moveTo(ids: string[], target: string) {
+    if (ids.length === 0 || busy) return
+
+    setError(null)
+    startTransition(async () => {
+      const ordered = [...ids].sort().reverse()
+
+      for (const id of ordered) {
+        const photo = library.find((i) => i.id === id)
+        if (!photo || photo.album === target) continue
+
+        const result = await updatePhoto(id, photo.caption, target)
+        if (!result.ok) {
+          setError(result.error ?? 'Those photos could not be moved.')
+          break
+        }
+      }
+
+      setSelected([])
+      router.refresh()
+    })
   }
 
   function removeSelected() {
-    setLibrary((prev) => prev.filter((image) => !selected.includes(image.id)))
-    setSelected([])
+    if (selected.length === 0) return
+    setConfirming(selected)
   }
 
-  function toggle(id: number) {
+  function confirmRemove() {
+    if (!confirming) return
+
+    const ids = confirming
+    const previous = library
+    setError(null)
+    setLibrary((prev) => prev.filter((i) => !ids.includes(i.id)))
+    setSelected([])
+
+    startTransition(async () => {
+      const result = await deletePhotos(ids)
+      setConfirming(null)
+
+      if (!result.ok) {
+        setLibrary(previous)
+        setError(result.error ?? 'Those photos could not be deleted.')
+        return
+      }
+      router.refresh()
+    })
+  }
+
+  function toggle(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
@@ -165,8 +312,35 @@ export default function GalleryManager() {
 
   return (
     <>
+      {error && (
+        <p className="mb-3 flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-px" />
+          {error}
+        </p>
+      )}
+
+      {/* Two ways in: upload a file, or point at one already hosted elsewhere. */}
+      <div className="inline-flex gap-0.5 p-0.5 bg-gray-100 rounded-lg mb-3">
+        {([
+          { id: 'upload', label: 'Upload', icon: Upload },
+          { id: 'link', label: 'From a link', icon: Link2 },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setMode(tab.id); setError(null) }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              mode === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Upload form — caption and destination are chosen here, before the files are picked */}
       <div
+        hidden={mode !== 'upload'}
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
@@ -180,7 +354,8 @@ export default function GalleryManager() {
           </span>
           <p className="text-sm font-semibold text-gray-900">Drop photos here to add them</p>
           <p className="mt-1 text-xs text-gray-400">
-            JPG, PNG or WebP up to 10 MB each · landscape crops work best on the site
+            JPG, PNG or WebP up to {MAX_UPLOAD_MB} MB each · resized to {MAX_DIMENSION}px and
+          converted to WebP on upload
           </p>
         </div>
 
@@ -213,7 +388,8 @@ export default function GalleryManager() {
 
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 transition-colors"
           >
             <ImagePlus className="w-4 h-4" />
             Browse files
@@ -253,7 +429,7 @@ export default function GalleryManager() {
               {pending.map((file) => (
                 <li key={file.id} className="relative flex-shrink-0">
                   <span className="block w-24 h-20 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
-                    <img src={file.url} alt={file.fileName} className="w-full h-full object-cover" />
+                    <img src={file.previewUrl} alt={file.fileName} className="w-full h-full object-cover" />
                   </span>
                   <button
                     onClick={() => dropPending(file.id)}
@@ -273,13 +449,15 @@ export default function GalleryManager() {
         <div className="mt-5 max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-2">
           <button
             onClick={savePending}
-            disabled={pending.length === 0}
+            disabled={pending.length === 0 || busy}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            <Check className="w-4 h-4" />
-            {pending.length === 0
-              ? 'Save'
-              : `Save ${pending.length} photo${pending.length > 1 ? 's' : ''} to ${albumLabel(uploadAlbum)}`}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {busy
+              ? `Uploading ${pending.length} photo${pending.length > 1 ? 's' : ''}…`
+              : pending.length === 0
+                ? 'Save'
+                : `Save ${pending.length} photo${pending.length > 1 ? 's' : ''} to ${albumLabel(uploadAlbum)}`}
           </button>
 
           {pending.length === 0 && saved === 0 && (
@@ -292,6 +470,84 @@ export default function GalleryManager() {
               {saved} photo{saved > 1 ? 's' : ''} saved to {albumLabel(uploadAlbum)}
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Add by link — for photos already hosted somewhere else. */}
+      <div hidden={mode !== 'link'} className="bg-white border border-gray-200 rounded-2xl px-6 py-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_14rem] gap-3">
+            <div>
+              <label htmlFor="link-url" className={labelClass}>Image URL</label>
+              <input
+                id="link-url"
+                type="text"
+                inputMode="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://images.unsplash.com/photo-… or /images/ladakh.jpg"
+                className={fieldClass}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="link-album" className={labelClass}>Save to</label>
+              <select
+                id="link-album"
+                value={uploadAlbum}
+                onChange={(e) => setUploadAlbum(e.target.value)}
+                className={fieldClass}
+              >
+                {albumOptions.map((option) => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label htmlFor="link-caption" className={labelClass}>Caption</label>
+            <input
+              id="link-caption"
+              type="text"
+              value={uploadCaption}
+              onChange={(e) => setUploadCaption(e.target.value)}
+              placeholder="Pangong Tso at first light"
+              className={fieldClass}
+            />
+          </div>
+
+          {/* A live preview is the only honest way to tell a good link from a typo. */}
+          {linkUrl.trim() && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="w-24 h-20 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+                <img
+                  src={linkUrl.trim()}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.style.opacity = '0' }}
+                  onLoad={(e) => { e.currentTarget.style.opacity = '1' }}
+                />
+              </span>
+              <p className="text-[11px] text-gray-400 min-w-0 truncate">
+                If nothing appears here, the address is wrong or the host blocks hotlinking.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              onClick={saveLink}
+              disabled={!linkUrl.trim() || busy}
+              className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {busy ? 'Saving…' : `Add to ${albumLabel(uploadAlbum)}`}
+            </button>
+            <p className="text-[11px] text-gray-400">
+              The file stays where it is — the library just records the address.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -501,7 +757,12 @@ export default function GalleryManager() {
 
                     <p className="mt-0.5 text-[11px] text-gray-500">{albumLabel(image.album)}</p>
                     <p className="text-[11px] text-gray-300 truncate">
-                      {image.size} · {image.dimensions} · {formatDate(image.uploadedAt)}
+                      {image.position === 0 && 'Large tile · '}
+                      {image.sizeBytes ? `${formatSize(image.sizeBytes)} · ` : ''}
+                      {image.width && image.height ? `${image.width}×${image.height} · ` : ''}
+                      {image.createdAt
+                        ? formatDate(image.createdAt)
+                        : `Photo ${(image.position ?? 0) + 1}`}
                     </p>
                   </>
                 )}
@@ -519,6 +780,15 @@ export default function GalleryManager() {
           </p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={`Delete ${confirming?.length ?? 0} photo${(confirming?.length ?? 0) === 1 ? '' : 's'}?`}
+        message="Uploaded files are removed from storage as well. Any destination still using one will show a broken image."
+        busy={busy}
+        onConfirm={confirmRemove}
+        onCancel={() => setConfirming(null)}
+      />
     </>
   )
 }

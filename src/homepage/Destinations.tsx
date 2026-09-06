@@ -1,13 +1,18 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import DestinationCard from '@/src/dastination/DestinationCard'
-import { homepageDestinations, destinations } from '@/src/data/destinations'
+import { homepageDestinations, listDestinations } from '@/src/lib/queries/destinations'
+import { fromPriceMap } from '@/src/lib/queries/packages'
 
-// Same card as the full /destination page. Which six show up is curated
-// from /admin/destinations.
-const featured = homepageDestinations(6)
+export default async function Destinations() {
+  // Same card as the full /destination page. Which six show up is curated
+  // from /admin/destinations. Resolved per render now, not once at import.
+  const [featured, all, prices] = await Promise.all([
+    homepageDestinations(6),
+    listDestinations(),
+    fromPriceMap(),
+  ])
 
-export default function Destinations() {
   return (
     <section id="destinations" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -24,7 +29,7 @@ export default function Destinations() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {featured.map((dest) => (
-            <DestinationCard key={dest.slug} dest={dest} />
+            <DestinationCard key={dest.slug} dest={dest} from={prices[dest.slug] ?? 0} />
           ))}
         </div>
 
@@ -34,7 +39,7 @@ export default function Destinations() {
             href="/destination"
             className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold px-8 py-3 rounded-full hover:bg-gray-700 transition-colors"
           >
-            View All {destinations.length} Destinations
+            View All {all.length} Destinations
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

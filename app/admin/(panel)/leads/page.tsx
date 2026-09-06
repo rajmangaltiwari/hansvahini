@@ -1,24 +1,25 @@
 import type { Metadata } from 'next'
-import { Download } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import LeadsTable from '@/src/admin/leads/LeadsTable'
+import ExportLeadsButton from '@/src/admin/leads/ExportLeadsButton'
+import { listLeads } from '@/src/lib/queries/leads'
 
 export const metadata: Metadata = { title: 'Leads' }
 
-export default function LeadsPage() {
+export default async function LeadsPage(props: PageProps<'/admin/leads'>) {
+  const { q } = await props.searchParams
+  const initialQuery = Array.isArray(q) ? q[0] : (q ?? '')
+
+  const leads = await listLeads()
+
   return (
     <>
       <PageHeader
         title="Leads"
         subtitle="Every enquiry from the website forms, the pop-up and WhatsApp."
-        actions={
-          <button className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        }
+        actions={<ExportLeadsButton leads={leads} />}
       />
-      <LeadsTable />
+      <LeadsTable initialLeads={leads} initialQuery={initialQuery} />
     </>
   )
 }

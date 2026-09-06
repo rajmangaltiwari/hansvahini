@@ -1,5 +1,5 @@
 import { type TravelPackage } from '@/src/data/packages'
-import { getDestinationBySlug } from '@/src/data/destinations'
+import { getDestinationBySlug } from '@/src/lib/queries/destinations'
 import Testimonials from '@/src/homepage/Testimonials'
 
 import Hero from './packageDetail/Hero'
@@ -17,9 +17,9 @@ import BackLink from './packageDetail/BackLink'
  *
  * This is a Server Component: only Gallery (lightbox) ships JavaScript.
  */
-export default function PackageDetails({ pkg }: { pkg: TravelPackage }) {
+export default async function PackageDetails({ pkg }: { pkg: TravelPackage }) {
   // Packages borrow their photo set from the place they run to.
-  const gallery = getDestinationBySlug(pkg.destinationSlug)?.gallery ?? []
+  const gallery = (await getDestinationBySlug(pkg.destinationSlug))?.gallery ?? []
 
   return (
     <main className="pt-16">

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { useActionState, useState } from 'react'
+import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react'
+import { signIn } from '@/src/server/actions/auth'
 
 const inputClass =
   'w-full border border-gray-200 rounded-lg pl-10 pr-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors'
@@ -10,24 +10,15 @@ const labelClass =
   'block text-[11px] font-medium text-gray-600 mb-1.5 uppercase tracking-wide'
 
 /**
- * UI only — there is no auth yet, so any credentials are accepted and the form
- * simply routes to the dashboard. Swap the submit handler for a real sign-in
- * call (and gate /admin/(panel) behind it) when authentication lands.
+ * Signs in against Supabase Auth. Accounts are created by hand in the Supabase
+ * dashboard — there is no sign-up route, by design.
  */
 export default function AdminLoginForm() {
-  const router = useRouter()
+  const [state, formAction, pending] = useActionState(signIn, {})
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading]   = useState(false)
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    // Brief pause so the button state reads as a real sign-in.
-    setTimeout(() => router.push('/admin/dashboard'), 600)
-  }
 
   return (
     <div className="w-full max-w-sm">
@@ -56,7 +47,14 @@ export default function AdminLoginForm() {
         Manage enquiries, packages, destinations and the photo library.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+      <form action={formAction} className="mt-8 space-y-5">
+        {state.error && (
+          <p className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-px" />
+            {state.error}
+          </p>
+        )}
+
         <div>
           <label htmlFor="admin-email" className={labelClass}>Email address</label>
           <div className="relative">
@@ -76,12 +74,7 @@ export default function AdminLoginForm() {
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label htmlFor="admin-password" className={`${labelClass} mb-0`}>Password</label>
-            <a href="#" className="text-[11px] font-medium text-gray-500 hover:text-gray-900 transition-colors">
-              Forgot password?
-            </a>
-          </div>
+          <label htmlFor="admin-password" className={labelClass}>Password</label>
           <div className="relative">
             <Lock className="w-4 h-4 text-gray-300 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -106,22 +99,12 @@ export default function AdminLoginForm() {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-gray-600 select-none">
-          <input
-            type="checkbox"
-            name="remember"
-            defaultChecked
-            className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-0 focus:ring-offset-0 accent-gray-900"
-          />
-          Keep me signed in for 30 days
-        </label>
-
         <button
           type="submit"
-          disabled={loading}
+          disabled={pending}
           className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-lg hover:bg-gray-800 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? (
+          {pending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               Signing in…
@@ -136,8 +119,8 @@ export default function AdminLoginForm() {
       </form>
 
       <p className="mt-8 text-[11px] leading-relaxed text-gray-400">
-        This area is restricted to Hansvahini staff. Authentication is not wired up yet —
-        any credentials will take you through to the dashboard.
+        This area is restricted to Hansvahini staff. Accounts are issued from the Supabase
+        dashboard — there is no self sign-up, and no self-serve password reset.
       </p>
     </div>
   )

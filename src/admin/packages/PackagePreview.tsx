@@ -1,36 +1,33 @@
-'use client'
-
-import { useState } from 'react'
 import Link from 'next/link'
 import { FileQuestion } from 'lucide-react'
 import PackageDetails from '@/src/packages/PackageDetails'
 import PreviewFrame from '@/src/admin/PreviewFrame'
-import { readDraft } from '@/src/admin/draftStore'
 import type { TravelPackage } from '@/src/data/packages'
 
 /**
- * Renders the real /packages/[slug] page against whichever copy is newest: a
- * local draft if one exists, otherwise the published record passed in by the
- * route. Reading storage in a lazy initialiser keeps it out of render.
+ * Renders the real /packages/[slug] page against the stored record.
+ *
+ * A Server Component, because PackageDetails is one — it queries the database
+ * for the destination's gallery, so it cannot be rendered from client code.
+ *
+ * Drafts come from the database rather than sessionStorage now: RLS lets a
+ * signed-in admin read `status = 'draft'` rows that the public cannot see, so a
+ * draft previews on any device instead of only in the tab that wrote it.
  */
 export default function PackagePreview({
   slug,
-  published,
+  record,
 }: {
   slug: string
-  published: TravelPackage | null
+  record: TravelPackage | null
 }) {
-  const [draft] = useState(() => readDraft<TravelPackage>('package', slug))
-  const pkg = draft ?? published
-
-  if (!pkg) {
+  if (!record) {
     return (
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm px-6 py-16 text-center">
         <FileQuestion className="w-8 h-8 text-gray-300 mx-auto mb-3" />
         <p className="text-sm font-semibold text-gray-900">Nothing to preview for “{slug}”</p>
         <p className="mt-1 text-xs text-gray-400 max-w-sm mx-auto">
-          No published package uses this slug, and there is no draft saved in this browser.
-          Drafts do not travel between devices.
+          No package uses this slug — neither published nor saved as a draft.
         </p>
         <Link
           href="/admin/packages"
@@ -42,16 +39,18 @@ export default function PackagePreview({
     )
   }
 
+  const isDraft = record.status === 'draft'
+
   return (
     <PreviewFrame
-      title={pkg.title || 'Untitled package'}
+      title={record.title || 'Untitled package'}
       backHref="/admin/packages"
       backLabel="Back to packages"
       editHref={`/admin/packages/${slug}/edit`}
-      liveHref={published ? `/packages/${published.slug}` : undefined}
-      source={draft ? 'draft' : 'published'}
+      liveHref={isDraft ? undefined : `/packages/${record.slug}`}
+      source={isDraft ? 'draft' : 'published'}
     >
-      <PackageDetails pkg={pkg} />
+      <PackageDetails pkg={record} />
     </PreviewFrame>
   )
 }

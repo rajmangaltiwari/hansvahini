@@ -4,12 +4,20 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ExternalLink, LogOut, X } from 'lucide-react'
 import { adminNav } from './adminNav'
+import { signOut } from '@/src/server/actions/auth'
 
 /**
  * The dark navigation rail. It is rendered once by AdminShell and positioned
  * by the parent: docked at `lg` and up, a slide-over drawer below that.
  */
-export default function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export default function AdminSidebar({
+  onNavigate,
+  badges = {},
+}: {
+  onNavigate?: () => void
+  /** Live counts keyed by nav href. A count of 0 renders nothing at all. */
+  badges?: Record<string, number>
+}) {
   const pathname = usePathname()
 
   return (
@@ -62,13 +70,13 @@ export default function AdminSidebar({ onNavigate }: { onNavigate?: () => void }
                 >
                   <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-gray-900' : 'text-gray-500 group-hover:text-white'}`} />
                   <span className="flex-1">{item.label}</span>
-                  {item.badge ? (
+                  {badges[item.href] ? (
                     <span
                       className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
                         active ? 'bg-gray-900 text-white' : 'bg-white/10 text-gray-300'
                       }`}
                     >
-                      {item.badge}
+                      {badges[item.href]}
                     </span>
                   ) : null}
                 </Link>
@@ -88,14 +96,18 @@ export default function AdminSidebar({ onNavigate }: { onNavigate?: () => void }
           <ExternalLink className="w-[18px] h-[18px] text-gray-500" />
           View live site
         </Link>
-        <Link
-          href="/admin/login"
-          onClick={onNavigate}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-        >
-          <LogOut className="w-[18px] h-[18px] text-gray-500" />
-          Sign out
-        </Link>
+        {/* A form, not a link: signing out has to clear the session cookie
+            server-side, or the redirect just bounces back to the dashboard. */}
+        <form action={signOut}>
+          <button
+            type="submit"
+            onClick={onNavigate}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <LogOut className="w-[18px] h-[18px] text-gray-500" />
+            Sign out
+          </button>
+        </form>
       </div>
     </div>
   )

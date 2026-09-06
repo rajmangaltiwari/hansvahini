@@ -3,10 +3,14 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import PackagesTable from '@/src/admin/packages/PackagesTable'
+import { listPackages } from '@/src/lib/queries/packages'
+import { featuredSlugs } from '@/src/lib/queries/featured'
 
 export const metadata: Metadata = { title: 'Packages' }
 
-export default function AdminPackagesPage() {
+export default async function AdminPackagesPage() {
+  const [packages, featured] = await Promise.all([listPackages(true), featuredSlugs('package')])
+
   return (
     <>
       <PageHeader
@@ -22,7 +26,7 @@ export default function AdminPackagesPage() {
           </Link>
         }
       />
-      <PackagesTable />
+      <PackagesTable packages={packages} featured={featured} />
     </>
   )
 }

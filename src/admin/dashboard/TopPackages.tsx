@@ -1,8 +1,9 @@
-import { popularPackages, formatPrice } from '@/src/data/packages'
+import { formatPrice } from '@/src/data/packages'
+import { popularPackages } from '@/src/lib/queries/packages'
 
 /** Best-performing trips by review volume, straight from the live site data. */
-export default function TopPackages() {
-  const top = popularPackages(5)
+export default async function TopPackages() {
+  const top = await popularPackages(5)
   const peak = Math.max(...top.map((p) => p.reviews))
 
   return (

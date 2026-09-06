@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Check, Eye, FileText } from 'lucide-react'
+import { AlertCircle, Check, Eye, FileText, Loader2 } from 'lucide-react'
 
 /**
  * Sticky footer for the create and edit forms. "Save as draft" keeps the record
@@ -13,11 +13,17 @@ export default function FormActions({
   submitLabel,
   onSaveDraft,
   previewHref,
+  busy = false,
+  error,
   note,
 }: {
   cancelHref: string
   submitLabel: string
   onSaveDraft: () => void
+  /** True while a save is in flight — both buttons lock so it cannot double-submit. */
+  busy?: boolean
+  /** Why the last save failed, if it did. */
+  error?: string | null
   /** Shown once a draft exists, so the preview is one click from the form. */
   previewHref?: string
   note?: string
@@ -48,7 +54,8 @@ export default function FormActions({
           <button
             type="button"
             onClick={onSaveDraft}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:border-gray-400 hover:text-gray-900 transition-colors"
+            disabled={busy}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <FileText className="w-4 h-4" />
             Save as draft
@@ -56,13 +63,21 @@ export default function FormActions({
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+            disabled={busy}
+            className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            <Check className="w-4 h-4" />
-            {submitLabel}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {busy ? 'Saving…' : submitLabel}
           </button>
         </div>
       </div>
+
+      {error && (
+        <p className="flex items-start gap-1.5 px-4 pb-3 text-[11px] text-red-600">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+          {error}
+        </p>
+      )}
     </div>
   )
 }

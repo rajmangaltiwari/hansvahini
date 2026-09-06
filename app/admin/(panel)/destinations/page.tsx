@@ -3,10 +3,25 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import PageHeader from '@/src/admin/ui/PageHeader'
 import DestinationsGrid from '@/src/admin/destinations/DestinationsGrid'
+import { listDestinations } from '@/src/lib/queries/destinations'
+import { listPackages } from '@/src/lib/queries/packages'
+import { featuredSlugs } from '@/src/lib/queries/featured'
 
 export const metadata: Metadata = { title: 'Destinations' }
 
-export default function AdminDestinationsPage() {
+export default async function AdminDestinationsPage() {
+  const [destinations, packages, featured] = await Promise.all([
+    listDestinations(true),
+    listPackages(true),
+    featuredSlugs('destination'),
+  ])
+
+  // One pass for every card's package count.
+  const packageCounts: Record<string, number> = {}
+  for (const pkg of packages) {
+    packageCounts[pkg.destinationSlug] = (packageCounts[pkg.destinationSlug] ?? 0) + 1
+  }
+
   return (
     <>
       <PageHeader
@@ -22,7 +37,11 @@ export default function AdminDestinationsPage() {
           </Link>
         }
       />
-      <DestinationsGrid />
+      <DestinationsGrid
+        destinations={destinations}
+        packageCounts={packageCounts}
+        featured={featured}
+      />
     </>
   )
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import DestinationPreview from '@/src/admin/destinations/DestinationPreview'
-import { getDestinationBySlug } from '@/src/data/destinations'
+import { getDestinationBySlug } from '@/src/lib/queries/destinations'
 
 export const metadata: Metadata = { title: 'Destination Preview' }
 
@@ -10,5 +10,5 @@ export const metadata: Metadata = { title: 'Destination Preview' }
  */
 export default async function DestinationPreviewPage(props: PageProps<'/admin/destinations/[slug]/preview'>) {
   const { slug } = await props.params
-  return <DestinationPreview slug={slug} published={getDestinationBySlug(slug) ?? null} />
+  return <DestinationPreview slug={slug} record={(await getDestinationBySlug(slug, true)) ?? null} />
 }
