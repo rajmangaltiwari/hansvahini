@@ -18,10 +18,18 @@ export const metadata: Metadata = {
  * counts.
  */
 export default async function AdminPanelLayout({ children }: LayoutProps<'/admin'>) {
-  const session = await verifySession()
-
-  // The Leads pill counts enquiries nobody has looked at yet.
-  const newLeads = await countLeadsByStatus('new')
+  // Both hit Supabase over the network, and Mumbai is a long way from the
+  // function region — awaiting them in sequence doubled the delay before this
+  // layout resolved, and loading.tsx cannot show a fallback for a layout that
+  // is still awaiting. Kicking them off together halves it.
+  //
+  // countLeadsByStatus runs even on a request that turns out to be signed out;
+  // RLS returns 0 there and verifySession's redirect still wins.
+  const [session, newLeads] = await Promise.all([
+    verifySession(),
+    // The Leads pill counts enquiries nobody has looked at yet.
+    countLeadsByStatus('new'),
+  ])
 
   return (
     <AdminShell
