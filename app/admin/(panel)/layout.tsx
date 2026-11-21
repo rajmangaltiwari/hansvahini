@@ -4,7 +4,7 @@ import { verifySession } from '@/src/lib/dal'
 import { countLeadsByStatus } from '@/src/lib/queries/stats'
 
 export const metadata: Metadata = {
-  title: { default: 'Admin — Hansvahini Expeditions', template: '%s — Hansvahini Admin' },
+  title: { default: 'Admin — Your Travels', template: '%s — Your Travels Admin' },
   robots: { index: false, follow: false },
 }
 

@@ -92,7 +92,7 @@ export default function PreviewFrame({
             <span className="w-2.5 h-2.5 rounded-full bg-gray-200" />
           </span>
           <span className="flex-1 text-center text-[11px] text-gray-400 truncate">
-            hansvahini.com{liveHref ?? ''}
+            example.com{liveHref ?? ''}
           </span>
         </div>
 

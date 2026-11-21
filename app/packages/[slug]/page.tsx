@@ -18,7 +18,7 @@ export async function generateMetadata(props: PageProps<'/packages/[slug]'>) {
   const pkg = await getPackageBySlug(slug)
   if (!pkg) return {}
   return {
-    title: `${pkg.title} — Hansvahini Expeditions`,
+    title: `${pkg.title} — Your Travels`,
     description: pkg.summary,
   }
 }

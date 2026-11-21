@@ -37,7 +37,7 @@ export default async function AboutHero() {
           A small team that would rather run one trip properly than ten badly
         </h1>
         <p className="mt-4 text-gray-200 text-sm sm:text-base max-w-2xl leading-relaxed">
-          Hansvahini Expeditions has been putting people on Himalayan roads, pilgrimage trails and
+          Your Travels has been putting people on Himalayan roads, pilgrimage trails and
           coral reefs since 2016. We plan every trip ourselves, we have walked or driven almost all
           of them, and we say so plainly when something will not work.
         </p>

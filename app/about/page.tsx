@@ -11,7 +11,7 @@ import Testimonials from '@/src/homepage/Testimonials'
 import EnquiryForm from '@/src/homepage/EnquiryForm'
 
 export const metadata: Metadata = {
-  title: 'About Us — Hansvahini Expeditions',
+  title: 'About Us — Your Travels',
   description:
     'A small team running guided travel across the Indian Himalaya, Uttarakhand, Rajasthan and the Andamans since 2016. How we plan trips, what we believe, and who you will be travelling with.',
 }

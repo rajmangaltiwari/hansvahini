@@ -31,7 +31,7 @@ export async function sendEnquiryNotification(enquiry: EnquiryInput): Promise<vo
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) throw new Error('RESEND_API_KEY is not set.')
 
-  const from = process.env.ENQUIRY_FROM_EMAIL ?? 'Hansvahini <onboarding@resend.dev>'
+  const from = process.env.ENQUIRY_FROM_EMAIL ?? 'Your Travels <onboarding@resend.dev>'
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   const adminUrl = `${site.replace(/\/$/, '')}/admin/leads`
 

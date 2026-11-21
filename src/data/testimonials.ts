@@ -30,7 +30,7 @@ export const testimonials: Testimonial[] = [
     location: 'Mumbai',
     rating: 5,
     avatar: 'PS',
-    text: 'Hansvahini Expeditions made our Ladakh trip absolutely unforgettable. Every detail was perfectly planned — the accommodations, the itinerary, and especially the local guides. We felt safe and cared for throughout the journey.',
+    text: 'Your Travels made our Ladakh trip absolutely unforgettable. Every detail was perfectly planned — the accommodations, the itinerary, and especially the local guides. We felt safe and cared for throughout the journey.',
     trip: 'Ladakh Adventure',
     // People trekking / enjoying mountains in Ladakh
     image: img('1500534314209-a25ddb2bd429'),
@@ -52,7 +52,7 @@ export const testimonials: Testimonial[] = [
     location: 'Bengaluru',
     rating: 5,
     avatar: 'AI',
-    text: 'We were a family of five including elderly parents. The team was extremely considerate and made sure everyone was comfortable. The Kedarnath Yatra was spiritually enriching and well-organized. Thank you, Hansvahini!',
+    text: 'We were a family of five including elderly parents. The team was extremely considerate and made sure everyone was comfortable. The Kedarnath Yatra was spiritually enriching and well-organized. Thank you, Your Travels!',
     trip: 'Kedarnath Yatra',
     // Family / pilgrims enjoying a mountain spiritual journey
     image: img('1502086223501-7ea6ecd79368'),
@@ -63,7 +63,7 @@ export const testimonials: Testimonial[] = [
     location: 'Jaipur',
     rating: 5,
     avatar: 'VS',
-    text: 'Second time booking with Hansvahini and they never disappoint. The Manali package was excellent value for money. The campfire evenings and the snow activities were the highlights. Will definitely book again!',
+    text: 'Second time booking with Your Travels and they never disappoint. The Manali package was excellent value for money. The campfire evenings and the snow activities were the highlights. Will definitely book again!',
     trip: 'Manali Retreat',
     // People around campfire / enjoying snow
     image: img('1537905569824-f89f14cceb68'),
@@ -74,7 +74,7 @@ export const testimonials: Testimonial[] = [
     location: 'Kochi',
     rating: 5,
     avatar: 'DN',
-    text: "A solo female traveller here — I felt completely safe with Hansvahini. The guides were knowledgeable, respectful, and fun. Rishikesh was magical and the rafting experience was thrilling. Couldn't have asked for more.",
+    text: "A solo female traveller here — I felt completely safe with Your Travels. The guides were knowledgeable, respectful, and fun. Rishikesh was magical and the rafting experience was thrilling. Couldn't have asked for more.",
     trip: 'Rishikesh & Haridwar',
     // People white water rafting / river adventure
     image: img('1530866495561-507c9faab2ed'),
@@ -85,7 +85,7 @@ export const testimonials: Testimonial[] = [
     location: 'Pune',
     rating: 5,
     avatar: 'AG',
-    text: 'The Ranthambore Safari was my dream trip and Hansvahini delivered it perfectly. We spotted a tiger on day one! The naturalist guide was exceptional. The resort they arranged was also top-notch.',
+    text: 'The Ranthambore Safari was my dream trip and Your Travels delivered it perfectly. We spotted a tiger on day one! The naturalist guide was exceptional. The resort they arranged was also top-notch.',
     trip: 'Ranthambore Wildlife Safari',
     // People on a jeep safari / wildlife adventure
     image: img('1516426122078-c23e76319801'),

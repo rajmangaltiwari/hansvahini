@@ -73,10 +73,10 @@ export default function Footer() {
               </div>
               <div className="leading-tight">
                 <span className="block text-sm font-bold tracking-wide uppercase">
-                  Hansvahini
+                  Your Travels
                 </span>
                 <span className="block text-xs text-gray-400 tracking-widest uppercase">
-                  Expeditions
+                  Tours &amp; Trips
                 </span>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} Hansvahini Expeditions. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Your Travels. All rights reserved.</p>
           <p>Made with ♥ for every traveller</p>
         </div>
       </div>

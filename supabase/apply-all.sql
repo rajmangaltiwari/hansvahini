@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- Hansvahini — full backend schema.
+-- Your Travels — full backend schema.
 --
 -- Paste this whole file into the Supabase SQL Editor and press Run.
 -- It is the three files in supabase/migrations/ concatenated, in order, and is

@@ -5,7 +5,7 @@ import { useState } from 'react'
 const faqs = [
   {
     id: 1,
-    question: 'How do I book a trip with Hansvahini Expeditions?',
+    question: 'How do I book a trip with Your Travels?',
     answer:
       'Simply fill out the Enquiry Form on our website with your preferred destination, travel dates, and number of travellers. Our team will get back to you within 24 hours with a personalised itinerary and quote. You can also call or WhatsApp us directly.',
   },

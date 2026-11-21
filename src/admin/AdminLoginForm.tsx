@@ -32,8 +32,8 @@ export default function AdminLoginForm() {
           </svg>
         </div>
         <div className="leading-tight">
-          <span className="block text-sm font-bold text-gray-900 tracking-wide uppercase">Hansvahini</span>
-          <span className="block text-xs text-gray-500 tracking-widest uppercase">Expeditions</span>
+          <span className="block text-sm font-bold text-gray-900 tracking-wide uppercase">Your Travels</span>
+          <span className="block text-xs text-gray-500 tracking-widest uppercase">Tours &amp; Trips</span>
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export default function AdminLoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@hansvahini.com"
+              placeholder="you@example.com"
               className={inputClass}
             />
           </div>
@@ -119,7 +119,7 @@ export default function AdminLoginForm() {
       </form>
 
       <p className="mt-8 text-[11px] leading-relaxed text-gray-400">
-        This area is restricted to Hansvahini staff. Accounts are issued from the Supabase
+        This area is restricted to Your Travels staff. Accounts are issued from the Supabase
         dashboard — there is no self sign-up, and no self-serve password reset.
       </p>
     </div>

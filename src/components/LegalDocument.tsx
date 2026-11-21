@@ -108,11 +108,11 @@ export default function LegalDocument({
               </p>
               <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
                 <a
-                  href="mailto:hello@hansvahini.com"
+                  href="mailto:hello@example.com"
                   className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:underline"
                 >
                   <Mail className="w-4 h-4 text-gray-400" />
-                  hello@hansvahini.com
+                  hello@example.com
                 </a>
                 <a
                   href="tel:+919876543210"

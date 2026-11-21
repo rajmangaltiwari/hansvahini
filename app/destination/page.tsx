@@ -14,7 +14,7 @@ import { listDestinations } from '@/src/lib/queries/destinations'
 import { fromPriceMap } from '@/src/lib/queries/packages'
 
 export const metadata: Metadata = {
-  title: 'All Destinations — Hansvahini Expeditions',
+  title: 'All Destinations — Your Travels',
   description:
     'Browse every destination we travel to — Ladakh, Spiti, Manali, Kedarnath, Rishikesh, Ranthambore, Varanasi and the Andamans. Filter by region, experience and difficulty.',
 }

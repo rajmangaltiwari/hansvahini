@@ -61,7 +61,7 @@ export default async function EnquiryForm({
                     />
                   ),
                   label: 'Email',
-                  value: 'info@hansvahiniexpeditions.com',
+                  value: 'info@example.com',
                 },
                 {
                   icon: (

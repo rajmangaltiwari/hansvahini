@@ -18,7 +18,7 @@ export async function generateMetadata(props: PageProps<'/destination/[slug]'>) 
   const dest = await getDestinationBySlug(slug)
   if (!dest) return {}
   return {
-    title: `${dest.name} Travel Guide — Hansvahini Expeditions`,
+    title: `${dest.name} Travel Guide — Your Travels`,
     description: dest.blurb,
   }
 }

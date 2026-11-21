@@ -51,7 +51,7 @@ export default function ExportLeadsButton({ leads }: { leads: Lead[] }) {
 
     const link = document.createElement('a')
     link.href = url
-    link.download = `hansvahini-leads-${new Date().toISOString().slice(0, 10)}.csv`
+    link.download = `yourtravels-leads-${new Date().toISOString().slice(0, 10)}.csv`
     document.body.appendChild(link)
     link.click()
     link.remove()

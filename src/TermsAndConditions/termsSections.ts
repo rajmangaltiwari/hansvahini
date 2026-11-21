@@ -11,7 +11,7 @@ export const termsSections: LegalSection[] = [
     id: 'about-these-terms',
     title: 'About these terms',
     body: [
-      'These terms govern every trip booked with Hansvahini Expeditions. Making a payment towards a trip means you have read them and accepted them on behalf of everyone travelling in your booking.',
+      'These terms govern every trip booked with Your Travels. Making a payment towards a trip means you have read them and accepted them on behalf of everyone travelling in your booking.',
       'Where a specific itinerary or written quote says something different from this page, the itinerary wins. Nothing here removes any right you have under Indian consumer law.',
     ],
   },
@@ -50,7 +50,7 @@ export const termsSections: LegalSection[] = [
     id: 'cancellation',
     title: 'Cancellation by you',
     body: [
-      'Cancel in writing to hello@hansvahini.com. The refund is calculated on the date we receive that email, against the total trip cost.',
+      'Cancel in writing to hello@example.com. The refund is calculated on the date we receive that email, against the total trip cost.',
       {
         list: [
           'More than 45 days before departure — 90% refunded.',
@@ -154,7 +154,7 @@ export const termsSections: LegalSection[] = [
     title: 'Complaints',
     body: [
       'If something is wrong during a trip, tell your guide or trip leader immediately. Almost everything can be fixed on the ground, and almost nothing can be fixed afterwards.',
-      'If it is not resolved on the trip, write to hello@hansvahini.com within 30 days of returning. We acknowledge every complaint within 48 hours and aim to close it within 30 days.',
+      'If it is not resolved on the trip, write to hello@example.com within 30 days of returning. We acknowledge every complaint within 48 hours and aim to close it within 30 days.',
     ],
   },
   {

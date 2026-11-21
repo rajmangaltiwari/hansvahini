@@ -10,9 +10,9 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
-  title: 'Hansvahini Expeditions — Travel & Trip Planner',
+  title: 'Your Travels — Travel & Trip Planner',
   description:
-    'Handcrafted travel packages to Ladakh, Manali, Spiti Valley, Kedarnath, and more. Plan your perfect Indian expedition with Hansvahini Expeditions.',
+    'Handcrafted travel packages to Ladakh, Manali, Spiti Valley, Kedarnath, and more. Plan your perfect Indian expedition with Your Travels.',
 }
 
 export default async function RootLayout({ children }: LayoutProps<'/'>) {

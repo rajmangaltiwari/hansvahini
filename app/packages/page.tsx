@@ -19,7 +19,7 @@ export async function generateMetadata() {
   const count = (await listPackages()).length
 
   return {
-    title: 'Travel Packages — Family, Honeymoon & Adventure Trips | Hansvahini Expeditions',
+    title: 'Travel Packages — Family, Honeymoon & Adventure Trips | Your Travels',
     description: `Browse ${count} curated travel packages across India. Filter by family, honeymoon, adventure, pilgrimage, wildlife and luxury themes, or by destination, trip length and budget.`,
   }
 }

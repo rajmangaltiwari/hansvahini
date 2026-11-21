@@ -5,7 +5,7 @@ import Header from '@/src/components/Header'
 import Footer from '@/src/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Page not found — Hansvahini Expeditions',
+  title: 'Page not found — Your Travels',
   // A 404 has nothing worth indexing, and indexing it competes with the real pages.
   robots: { index: false, follow: true },
 }

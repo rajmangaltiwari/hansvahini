@@ -480,7 +480,7 @@ export default function LeadsTable({
 
             <div className="grid grid-cols-2 gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
               <a
-                href={`mailto:${selected.email}?subject=${encodeURIComponent(`Your ${selected.destination} enquiry — Hansvahini Expeditions`)}`}
+                href={`mailto:${selected.email}?subject=${encodeURIComponent(`Your ${selected.destination} enquiry — Your Travels`)}`}
                 className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors"
               >
                 <Mail className="w-4 h-4" />
@@ -488,7 +488,7 @@ export default function LeadsTable({
               </a>
               <a
                 href={`https://wa.me/${whatsappNumber(selected.phone)}?text=${encodeURIComponent(
-                  `Hi ${selected.name}, this is Hansvahini Expeditions about your ${selected.destination} enquiry.`
+                  `Hi ${selected.name}, this is Your Travels about your ${selected.destination} enquiry.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

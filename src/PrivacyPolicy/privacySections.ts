@@ -11,8 +11,8 @@ export const privacySections: LegalSection[] = [
     id: 'who-we-are',
     title: 'Who we are',
     body: [
-      'Hansvahini Expeditions plans and operates guided travel across India — the Himalaya, the Uttarakhand pilgrimage circuits, Rajasthan, Varanasi and the Andaman Islands. This policy explains what we do with the personal information you give us when you enquire about a trip, book one, or simply browse the site.',
-      'It applies to hansvahini.com and to every enquiry that reaches us through the website forms, the pop-up enquiry form, WhatsApp, email or phone.',
+      'Your Travels plans and operates guided travel across India — the Himalaya, the Uttarakhand pilgrimage circuits, Rajasthan, Varanasi and the Andaman Islands. This policy explains what we do with the personal information you give us when you enquire about a trip, book one, or simply browse the site.',
+      'It applies to example.com and to every enquiry that reaches us through the website forms, the pop-up enquiry form, WhatsApp, email or phone.',
     ],
   },
   {
@@ -105,7 +105,7 @@ export const privacySections: LegalSection[] = [
           'Nominate someone to exercise these rights on your behalf if you are unable to.',
         ],
       },
-      'Send any of these requests to hello@hansvahini.com with the word "Privacy" in the subject line. If you are not satisfied with how we handle it, you may complain to the Data Protection Board of India.',
+      'Send any of these requests to hello@example.com with the word "Privacy" in the subject line. If you are not satisfied with how we handle it, you may complain to the Data Protection Board of India.',
     ],
   },
   {
@@ -137,9 +137,9 @@ export const privacySections: LegalSection[] = [
       'In line with Indian law, you can raise any privacy complaint with our Grievance Officer, who will acknowledge it within 48 hours and resolve it within thirty days.',
       {
         list: [
-          'Email — privacy@hansvahini.com',
+          'Email — privacy@example.com',
           'Phone — +91 98765 43210, Monday to Saturday, 9 AM to 7 PM IST',
-          'Post — Hansvahini Expeditions, Grievance Officer, Dehradun, Uttarakhand, India',
+          'Post — Your Travels, Grievance Officer, Dehradun, Uttarakhand, India',
         ],
       },
     ],

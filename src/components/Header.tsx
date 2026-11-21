@@ -43,8 +43,8 @@ export default function Header() {
               </svg>
             </div>
             <div className="leading-tight">
-              <span className="block text-sm font-bold text-gray-900 tracking-wide uppercase">Hansvahini</span>
-              <span className="block text-xs text-gray-500 tracking-widest uppercase">Expeditions</span>
+              <span className="block text-sm font-bold text-gray-900 tracking-wide uppercase">Your Travels</span>
+              <span className="block text-xs text-gray-500 tracking-widest uppercase">Tours &amp; Trips</span>
             </div>
           </Link>
 

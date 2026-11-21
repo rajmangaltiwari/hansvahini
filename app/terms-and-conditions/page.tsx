@@ -4,9 +4,9 @@ import Footer from '@/src/components/Footer'
 import TermsAndConditions from '@/src/TermsAndConditions/TermsAndConditions'
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions — Hansvahini Expeditions',
+  title: 'Terms & Conditions — Your Travels',
   description:
-    'Booking, payment and cancellation terms for trips with Hansvahini Expeditions, along with traveller responsibilities, altitude and insurance requirements, and how liability is shared.',
+    'Booking, payment and cancellation terms for trips with Your Travels, along with traveller responsibilities, altitude and insurance requirements, and how liability is shared.',
 }
 
 export default function TermsAndConditionsPage() {

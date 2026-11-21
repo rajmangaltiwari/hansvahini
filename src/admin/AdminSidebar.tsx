@@ -33,7 +33,7 @@ export default function AdminSidebar({
             </svg>
           </div>
           <div className="leading-tight">
-            <span className="block text-sm font-bold text-white tracking-wide uppercase">Hansvahini</span>
+            <span className="block text-sm font-bold text-white tracking-wide uppercase">Your Travels</span>
             <span className="block text-[10px] text-gray-400 tracking-[0.2em] uppercase">Admin Panel</span>
           </div>
         </Link>

@@ -4,7 +4,7 @@ import AdminLoginForm from '@/src/admin/AdminLoginForm'
 import SiteImage from '@/src/components/SiteImage'
 
 export const metadata: Metadata = {
-  title: 'Admin Sign In — Hansvahini Expeditions',
+  title: 'Admin Sign In — Your Travels',
   // Reached by URL only: nothing on the public site links here, and it stays out of search.
   robots: { index: false, follow: false },
 }
@@ -43,8 +43,8 @@ export default function AdminLoginPage() {
               </svg>
             </div>
             <div className="leading-tight">
-              <span className="block text-base font-bold text-white tracking-wide uppercase">Hansvahini</span>
-              <span className="block text-xs text-gray-400 tracking-[0.2em] uppercase">Expeditions</span>
+              <span className="block text-base font-bold text-white tracking-wide uppercase">Your Travels</span>
+              <span className="block text-xs text-gray-400 tracking-[0.2em] uppercase">Tours &amp; Trips</span>
             </div>
           </div>
         </div>
